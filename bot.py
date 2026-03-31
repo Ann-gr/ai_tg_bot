@@ -1,6 +1,7 @@
 from flask import Flask, request
 from telegram import Update, Bot
 from config import TOKEN
+import os
 
 app = Flask(__name__)
 bot = Bot(TOKEN)
@@ -34,3 +35,9 @@ def webhook():
             )
 
     return "ok"
+
+if __name__ == "__main__":
+    print("Starting bot...")
+
+    PORT = int(os.getenv("PORT", 10000))
+    app.run(host="0.0.0.0", port=PORT)
