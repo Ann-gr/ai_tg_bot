@@ -18,17 +18,22 @@ tg_app.add_handler(CommandHandler("start", start))
 tg_app.add_handler(CommandHandler("help", help_command))
 tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
+loop.run_until_complete(tg_app.initialize())
+loop.run_until_complete(tg_app.start())
+
 # Flask routes
 @app_flask.route("/")
 def home():
     return "Bot is running!"
 
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-
 @app_flask.route(f"/webhook/{TOKEN}", methods=["POST"])
 def webhook():
     try:
+        print("🔥 WEBHOOK HIT")
+        
         data = request.get_json(force=True)
         update = Update.de_json(data, tg_app.bot)
 
