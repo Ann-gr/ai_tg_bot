@@ -43,9 +43,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
         )
         return
     
+    elif text == "📜 Показать память":
+        history = get_history(user_id)
+
+        if not history:
+            await update.message.reply_text("Память пустая")
+            return
+
+        text_history = "\n\n".join(
+            f"{m['role']}: {m['content'][:100]}"
+            for m in history
+        )
+
+        await update.message.reply_text(f"📜 История:\n\n{text_history}")
+        return
+    
     elif text == "🧹 Очистить память":
         clear_history(user_id)
-        await update.message.reply_text("Память очищена ✅")
+        await update.message.reply_text(
+            "Память очищена ✅\n\nВыберите режим 👇",
+            reply_markup=get_main_keyboard()
+        )
         return
 
     state = get_user(user_id) # получаем состояние пользователя

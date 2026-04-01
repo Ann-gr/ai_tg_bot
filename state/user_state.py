@@ -41,6 +41,8 @@ def get_history(user_id):
 
 def clear_history(user_id):
     data = load_data()
+    
     if str(user_id) in data:
         data[str(user_id)]["history"] = []
-        save_data(data)
+
+    save_data(data)
