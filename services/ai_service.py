@@ -1,7 +1,7 @@
-import requests
+import httpx
 from config import API_URL, OPENROUTER_API_KEY, MODEL
 
-def analyze_with_ai(prompt):
+async def analyze_with_ai(prompt):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
@@ -13,12 +13,29 @@ def analyze_with_ai(prompt):
     }
 
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.post(API_URL, headers=headers, json=payload)
+            print("AI RESPONSE:", response.status_code) # логирование
 
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
-        
-        return f"Ошибка {response.status_code}: {response.text}"
-    
-    except requests.exceptions.RequestException:
-        return "Ошибка подключения к API"
+        if response.status_code != 200:
+            return f"Ошибка {response.status_code}: {response.text}"
+
+        try:
+            data = response.json()
+        except Exception:
+            return "Ошибка: некорректный ответ от AI"
+
+        if "choices" not in data or not data["choices"]:
+            return "Ошибка: пустой ответ от AI"
+
+        try:
+            return data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError):
+            return "Ошибка: неправильный формат ответа AI"
+
+    except httpx.TimeoutException:
+        return "⏳ AI долго отвечает, попробуйте позже"
+
+    except httpx.RequestError as e:
+        print("Request error:", e)
+        return "Ошибка подключения к AI"

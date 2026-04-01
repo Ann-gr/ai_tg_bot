@@ -1,21 +1,24 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+# AI pipeline
 from core.prompt_builder import create_prompt
 from services.ai_service import analyze_with_ai
-from state.user_state import user_state
+# форматирование ответа
 from utils.formatter import format_response
+# UI (кнопки Telegram)
 from handlers.keyboards import get_main_keyboard, get_number_keyboard
-from state.user_state import get_user, set_user
+# работа с памятью пользователя
+from state.user_state import user_state, get_user, set_user
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # вызывается на каждое текстовое сообщение
     user_id = update.effective_user.id
     text = update.message.text
 
     # обработка кнопок
     if text == "📊 Общий анализ":
-        set_user(user_id, {"mode": "analysis", "top_n": 10, "freq_n": 10})
-        await update.message.reply_text("Режим: общий анализ 📊\n\nОтправьте текст", reply_markup=get_main_keyboard())
+        set_user(user_id, {"mode": "analysis", "top_n": 10, "freq_n": 10}) # сохраняем состояние пользователя
+        await update.message.reply_text("Режим: общий анализ 📊\n\nОтправьте текст", reply_markup=get_main_keyboard()) # отвечаем пользователю
         return
 
     elif text == "📝 Краткое содержание":
@@ -40,9 +43,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    state = get_user(user_id)
+    state = get_user(user_id) # получаем состояние пользователя
 
-    if not state:
+    if not state: # fallback (дефолтное состояние)
         state = {
             "mode": "analysis",
             "top_n": 10,
@@ -71,7 +74,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    mode = state.get("mode", "analysis")
+    mode = state.get("mode", "analysis") # получаем режим
 
     await update.message.reply_text("⏳ Анализирую текст...")
 
@@ -82,9 +85,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         freq_n=state.get("freq_n", 10)
     )
 
-    result = format_response(analyze_with_ai(prompt), mode)
+    try:
+        ai_result = await analyze_with_ai(prompt)
+        result = format_response(ai_result, mode)
+    except Exception as e:
+        print("AI ERROR:", e)
+        result = "❌ Ошибка при обработке. Попробуйте позже."
 
     await update.message.reply_text(
         result,
         reply_markup=get_main_keyboard()
-    )
+    ) # отправляем результат и показываем меню
