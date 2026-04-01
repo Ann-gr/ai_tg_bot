@@ -45,6 +45,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
     
     elif text == "🧹 Очистить память":
         clear_history(user_id)
+        await update.message.reply_text("Память очищена ✅")
         return
 
     state = get_user(user_id) # получаем состояние пользователя
