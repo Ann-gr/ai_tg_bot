@@ -68,10 +68,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
             state["waiting_for_number"] = True
             set_user(user_id, state)
 
-            await update.message.reply_text(
-                "Сколько слов вывести?",
-                reply_markup=get_number_keyboard()
-            )
+            if state.get("last_text"):
+                await update.message.reply_text(
+                    "Текст уже загружен ✅\nВыберите количество слов 👇",
+                    reply_markup=get_number_keyboard()
+                )
+            else:
+                await update.message.reply_text(
+                    "Сколько слов вывести?",
+                    reply_markup=get_number_keyboard()
+                )
             return
 
         set_user(user_id, state)
@@ -89,6 +95,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
     elif text == "⬅️ Назад":
         await update.message.reply_text(
             "Выберите режим 👇",
+            reply_markup=get_main_keyboard()
+        )
+        return
+    
+    elif text == "🆕 Добавить новый текст":
+        state["last_text"] = None
+        set_user(user_id, state)
+
+        await update.message.reply_text(
+            "Отправьте новый текст ✍️",
             reply_markup=get_main_keyboard()
         )
         return
@@ -132,7 +148,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
         state["waiting_for_number"] = False
         set_user(user_id, state)
 
-        await update.message.reply_text(
+        if state.get("last_text"):
+            await analyze_last_text(update, user_id, state)
+        else:   
+            await update.message.reply_text(
             f"Отлично! Выбрано: {number} ✅\n\nТеперь отправьте текст",
             reply_markup=get_main_keyboard()
         )
@@ -183,8 +202,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     state["last_text"] = text
     set_user(user_id, state)
+    mode = state.get("mode", "analysis")
 
-    await update.message.reply_text("⏳ Анализирую файл...")
+    await update.message.reply_text(f"⏳ Анализирую файл ({mode})...")
     
     try:
         result = await run_analysis(user_id, text, state)

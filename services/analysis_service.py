@@ -19,13 +19,10 @@ async def run_analysis(user_id, text, state):
     history = get_history(user_id)
 
     messages = [
-        {"role": "system", "content": prompt}
+        {"role": "system", "content": prompt},
+        *history[-5:],
+        {"role": "user", "content": text}
     ]
-
-    # добавляем только последние 5 сообщений
-    messages += history[-5:]
-
-    messages.append({"role": "user", "content": text})
 
     ai_result = await analyze_with_ai(messages)
 
