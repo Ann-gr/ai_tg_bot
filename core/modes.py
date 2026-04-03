@@ -99,7 +99,7 @@ Analyze the tone of the text.
 Return format:
 
 📌 Тональность:
-(positive / negative / neutral)
+(позитивная / негативная / нейтральная)
 
 📌 Объяснение:
 (1–2 предложения)
