@@ -16,18 +16,21 @@ async def run_analysis(user_id, text, state):
         freq_n=state.get("freq_n", 10)
     )
 
-    history = get_history(user_id)
-
     messages = [
-        {"role": "system", "content": prompt},
-        *history[-5:],
-        {"role": "user", "content": text}
+        {"role": "user", "content": prompt}
     ]
 
     ai_result = await analyze_with_ai(messages)
 
+    def is_real_text(text):
+        CONTROL_WORDS = [
+            "📊", "📝", "🔑", "📈", "🆕", "📜", "🧹", "⬅️"
+        ]
+        return not any(text.startswith(c) for c in CONTROL_WORDS)
+
     # сохраняем только диалог
-    add_message(user_id, "user", text)
-    add_message(user_id, "assistant", ai_result)
+    if is_real_text(text):
+        add_message(user_id, "user", text)
+        add_message(user_id, "assistant", ai_result)
 
     return format_response(ai_result, mode)

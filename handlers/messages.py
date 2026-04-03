@@ -51,6 +51,17 @@ MODE_CONFIG = {
     }
 }
 
+CONTROL_BUTTONS = [
+    "📊 Общий анализ",
+    "📝 Краткое содержание",
+    "🔑 Ключевые слова",
+    "📈 Частотный анализ",
+    "🆕 Добавить новый текст",
+    "📜 Показать память",
+    "🧹 Очистить память",
+    "⬅️ Назад"
+]
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # вызывается на каждое текстовое сообщение
     user_id = update.effective_user.id
     text = update.message.text
@@ -169,6 +180,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE): # 
         result = "❌ Ошибка при обработке"
 
     await update.message.reply_text(result, reply_markup=get_main_keyboard())
+
+    if text in CONTROL_BUTTONS:
+        return
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     document = update.message.document
