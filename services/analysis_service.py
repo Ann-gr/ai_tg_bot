@@ -33,6 +33,6 @@ async def run_analysis(user_id, text, state):
 
     # сохраняем только диалог
     if is_real_text(ai_result):
-        add_message(user_id, "user", text)
-        add_message(user_id, "assistant", ai_result)
+        await add_message(user_id, "user", text)
+        await add_message(user_id, "assistant", ai_result)
     return format_response(ai_result, mode)
