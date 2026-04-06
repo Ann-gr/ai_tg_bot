@@ -14,7 +14,6 @@ from utils.text_utils import shorten_text
 from utils.mode_utils import get_mode_title
 
 from state.storage import load_data
-from state.user_state import clear_history
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -206,7 +205,3 @@ async def debug_callbacks(update, context):
 
     elif query.data == "debug_raw":
         await query.message.reply_text(f"🧾 Сырые данные:\n{user_data}")
-
-    elif query.data == "debug_clear":
-        clear_history(user_id)
-        await query.message.reply_text("🧹 История очищена")
