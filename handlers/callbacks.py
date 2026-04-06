@@ -9,23 +9,26 @@ from handlers.keyboards import (
     get_back_keyboard,
 )
 from services.analysis_service import run_analysis
-from state.user_state import get_user, set_user
+from state import state_manager
 from utils.text_utils import shorten_text
 from utils.mode_utils import get_mode_title
+
+from state.storage import load_data
+from state.user_state import clear_history
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     user_id = update.effective_user.id
-    state = get_user(user_id)
+    state = state_manager.get_state(user_id)
 
     data = query.data
 
     # UI навигация
     if data == "go:menu":
         state["screen"] = "MAIN_MENU"
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
         has_text = bool(state.get("last_text"))
         mode_title = get_mode_title(state.get("mode"))
 
@@ -39,7 +42,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "go:upload":
         state["screen"] = "UPLOAD"
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
             "📂 Отправьте текст или файл",
@@ -49,7 +52,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "go:help":
         state["screen"] = "HELP"
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
             "🧠 *Режимы анализа*\n\n"
@@ -75,7 +78,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == "go:example":
         state["screen"] = "EXAMPLE"
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
             "📌 Пример работы:\n\n"
@@ -94,7 +97,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("mode:"):
         mode = data.split(":")[1]
         state["mode"] = mode
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         if mode in ["keywords", "frequency"]:
             await query.edit_message_text(
@@ -110,7 +113,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         _, mode, value = data.split(":")
         state["mode"] = mode
         state["params"] = {"n": int(value)}
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await run_and_show_result(query, user_id, state)
         return
@@ -128,7 +131,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "action:new_text":
         state["last_text"] = None
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
             "📂 Отправьте новый текст или файл", 
@@ -162,7 +165,7 @@ async def run_and_show_result(query, user_id, state):
     result = await run_analysis(user_id, text, state)
 
     state["last_result"] = result
-    set_user(user_id, state)
+    state_manager.update_state(user_id, **state)
 
     title = get_mode_title(state.get("mode"))
 
@@ -180,3 +183,30 @@ async def run_and_show_result(query, user_id, state):
         formatted_text,
         reply_markup=get_result_keyboard(is_truncated),
     )
+
+async def debug_callbacks(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    user_id = str(query.from_user.id)
+    data = load_data()
+
+    user_data = data.get(user_id, {})
+
+    if query.data == "debug_state":
+        state = user_data.get("state", {})
+        await query.message.reply_text(f"📦 Состояние:\n{state}")
+
+    elif query.data == "debug_history":
+        history = user_data.get("history", [])
+        text = "\n\n".join(
+            [f"{m['role']}: {m['content']}" for m in history]
+        )
+        await query.message.reply_text(f"💬 История:\n{text or 'empty'}")
+
+    elif query.data == "debug_raw":
+        await query.message.reply_text(f"🧾 Сырые данные:\n{user_data}")
+
+    elif query.data == "debug_clear":
+        clear_history(user_id)
+        await query.message.reply_text("🧹 История очищена")

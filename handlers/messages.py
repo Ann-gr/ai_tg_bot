@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from handlers.keyboards import get_mode_keyboard
-from state.user_state import set_user, get_user
+from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
 
@@ -26,10 +26,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
 
-    state = get_user(user_id) or get_default_state()
+    state = state_manager.get_state(user_id) or get_default_state()
 
     state["last_text"] = text
-    set_user(user_id, state)
+    state_manager.update_state(user_id, **state)
 
     await update.message.reply_text(
         "✅ Текст загружен\n\nВыберите режим анализа:",
@@ -41,7 +41,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     document = update.message.document
     user_id = update.effective_user.id
 
-    state = get_user(user_id) or get_default_state()
+    state = state_manager.get_state(user_id) or get_default_state()
 
     file_name = document.file_name.lower()
 
@@ -81,7 +81,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Сохраняем в state
         state["last_text"] = text
-        set_user(user_id, state)
+        state_manager.update_state(user_id, **state)
 
         await update.message.reply_text(
             "✅ Файл успешно загружен\n\nВыберите режим анализа:",

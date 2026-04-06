@@ -4,7 +4,7 @@ from services.ai_service import analyze_with_ai
 # форматирование ответа
 from utils.formatter import format_response
 # добавляем историю
-from state.user_state import add_message
+from state import state_manager
 
 async def run_analysis(user_id, text, state):
     mode = state.get("mode", "analysis")
@@ -32,8 +32,10 @@ async def run_analysis(user_id, text, state):
         return not any(text.startswith(c) for c in CONTROL_WORDS)
 
     # сохраняем только диалог
-    if is_real_text(text):
-        add_message(user_id, "user", text)
-        add_message(user_id, "assistant", ai_result)
+    if is_real_text(ai_result):
+        state_manager.add_message(user_id, "user", text)
+        state_manager.add_message(user_id, "assistant", ai_result)
 
+        state_manager.set_last_text(user_id, text)
+        state_manager.set_last_result(user_id, ai_result)
     return format_response(ai_result, mode)

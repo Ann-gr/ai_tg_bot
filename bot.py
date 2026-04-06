@@ -5,9 +5,15 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 from config import TOKEN
-from handlers.commands import start
+from handlers.commands import start, debug
 from handlers.messages import handle_message, handle_document
-from handlers.callbacks import handle_callback
+from handlers.callbacks import handle_callback, debug_callbacks
+from handlers.debug import debug_menu
+
+from state.db.models import init_db
+from state.db.debug import print_users
+# инициализируем базу данных
+init_db()
 
 # создаём веб-сервер
 app_flask = Flask(__name__)
@@ -17,9 +23,12 @@ tg_app = ApplicationBuilder().token(TOKEN).build()
 
 # регистрируем handlers
 tg_app.add_handler(CommandHandler("start", start))
+tg_app.add_handler(CommandHandler("debug", debug))
+tg_app.add_handler(CommandHandler("debug", debug_menu))
 tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)) # указываем, что нужно обрабатывать текст, но не команды
 tg_app.add_handler(MessageHandler(filters.Document.ALL, handle_document)) # добавляем загрузку документов
 tg_app.add_handler(CallbackQueryHandler(handle_callback)) # добавляем обработку callback-запросов
+tg_app.add_handler(CallbackQueryHandler(debug_callbacks))
 # создаём event loop вручную
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -58,3 +67,5 @@ if __name__ == "__main__": # точка входа
 
     PORT = int(os.getenv("PORT", 10000)) # Render даёт порт через env
     app_flask.run(host="0.0.0.0", port=PORT) # запускаем сервер
+
+print_users()
