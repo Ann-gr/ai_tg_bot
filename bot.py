@@ -12,6 +12,7 @@ from handlers.debug import debug_menu
 from handlers.test_db import test_db
 
 from services.db import connect_db
+from state.db.init_db import init_db
 
 # создаём веб-сервер
 app_flask = Flask(__name__)
@@ -30,6 +31,7 @@ tg_app.add_handler(CallbackQueryHandler(debug_callbacks))
 # создаём event loop вручную
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
+init_db()
 loop.run_until_complete(connect_db())
 
 # запускаем Telegram приложение
