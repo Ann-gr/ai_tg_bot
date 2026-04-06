@@ -51,12 +51,24 @@ def get_result_keyboard(is_truncated=False):
 
     return InlineKeyboardMarkup(keyboard)
 
-def get_main_menu_keyboard():
-    return InlineKeyboardMarkup([
+def get_main_menu_keyboard(has_text=False):
+    keyboard = [
         [InlineKeyboardButton("📂 Загрузить текст", callback_data="go:upload")],
-        [InlineKeyboardButton("🧠 Помощь", callback_data="go:help")]
+    ]
+
+    if has_text:
+        keyboard.append([
+            InlineKeyboardButton("🔁 Повторить анализ", callback_data="action:repeat")
+        ])
+        keyboard.append([
+            InlineKeyboardButton("⚙️ Выбрать режим", callback_data="action:change_mode")
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton("🧠 Помощь", callback_data="go:help")
     ])
 
+    return InlineKeyboardMarkup(keyboard)
 
 def get_back_keyboard():
     return InlineKeyboardMarkup([

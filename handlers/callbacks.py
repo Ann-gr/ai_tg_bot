@@ -26,10 +26,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "go:menu":
         state["screen"] = "MAIN_MENU"
         set_user(user_id, state)
+        has_text = bool(state.get("last_text"))
+        mode_title = get_mode_title(state.get("mode"))
 
         await query.edit_message_text(
-            "📊 Главное меню\n\nВыберите действие:",
-            reply_markup=get_main_menu_keyboard()
+            "📊 Главное меню\n\n"
+            f"Текущий режим: {mode_title}\n\n"
+            "Выберите действие:",
+            reply_markup=get_main_menu_keyboard(has_text)
         )
         return
 

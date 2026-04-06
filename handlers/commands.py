@@ -6,8 +6,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет!\n\n"
         "Я бот для анализа текста и документов.\n\n"
-        "💡 Нажмите кнопку ниже, чтобы открыть главное меню\n",
-        reply_markup=get_main_menu_keyboard()
+        "📂 Отправьте текст/файл\n"
+        "или выберите действие ниже 👇",
+        reply_markup=get_main_menu_keyboard(False)
     )
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
