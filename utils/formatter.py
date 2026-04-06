@@ -19,13 +19,13 @@ def validate_structure(text: str, mode: str) -> str:
         return "⚠️ Пустой ответ от AI"
 
     if mode == "analysis":
-        required = ["📌 Краткое содержание", "📌 Тема"]
+        required = ["Краткое содержание", "Тема"]
     elif mode == "summary":
-        required = ["📌 Краткое содержание"]
+        required = ["Краткое содержание"]
     elif mode == "keywords":
-        required = ["📌 Ключевые слова"]
+        required = ["Ключевые слова"]
     elif mode == "frequency":
-        required = ["📌 Частотные слова"]
+        required = ["Частотные слова"]
     else:
         return text
 
