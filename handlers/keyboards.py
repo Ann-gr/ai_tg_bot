@@ -28,8 +28,15 @@ def get_param_keyboard(mode):
 
     return InlineKeyboardMarkup(keyboard)
 
-def get_result_keyboard():
-    keyboard = [
+def get_result_keyboard(is_truncated=False):
+    keyboard = []
+
+    if is_truncated:
+        keyboard.append([
+            InlineKeyboardButton("📖 Показать полностью", callback_data="action:full_result")
+    ])
+
+    keyboard.extend([
         [
             InlineKeyboardButton("🔁 Повторить", callback_data="action:repeat"),
         ],
@@ -37,6 +44,21 @@ def get_result_keyboard():
             InlineKeyboardButton("⚙️ Изменить режим", callback_data="action:change_mode"),
             InlineKeyboardButton("🆕 Новый текст", callback_data="action:new_text"),
         ],
-    ]
+        [
+            InlineKeyboardButton("⬅️ В меню", callback_data="go:menu"),
+        ]
+    ])
 
     return InlineKeyboardMarkup(keyboard)
+
+def get_main_menu_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📂 Загрузить текст", callback_data="go:upload")],
+        [InlineKeyboardButton("🧠 Помощь", callback_data="go:help")]
+    ])
+
+
+def get_back_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Назад", callback_data="go:menu")]
+    ])

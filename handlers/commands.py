@@ -1,15 +1,60 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from handlers.keyboards import get_mode_keyboard
+from handlers.keyboards import get_mode_keyboard, get_main_menu_keyboard
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! 👋\n\nЯ бот для анализа текста.\n\nЯ могу проанализировать текст из вашего файла или сообщения.\n\n📂 Поддерживаются только следующие форматы: PDF, DOCX, TXT."
+        "👋 Привет!\n\n"
+        "Я бот для анализа текста и документов.\n\n"
+        "💡 Нажмите кнопку ниже, чтобы открыть главное меню\n",
+        reply_markup=get_main_menu_keyboard()
     )
 
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Используйте кнопки для выбора режима анализа.\n\n📊 Общий анализ - краткое содержание, основная тема, ключевые идеи и слова (топ 10).\n📝 Краткое содержание - четкая выжимка из текста на 2-4 предложения.\n🔑 Ключевые слова - выводит ключевые слова (количество указывается после выбора режима).\n📈 Частотный анализ - выводит топ слов по частоте упоминания в тексте (количество указывается после выбора режима).",
+        "☰ Главное меню\n\n"
+        "Выберите действие:",
+        parse_mode="Markdown",
         reply_markup=get_mode_keyboard()
+    )
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🧠 *Режимы анализа*\n\n"
+
+        "📊 *Общий анализ*\n"
+        "→ краткое содержание, тема, ключевые идеи\n\n"
+
+        "📝 *Краткое содержание*\n"
+        "→ выжимка текста в 2–4 предложения\n\n"
+
+        "🔑 *Ключевые слова*\n"
+        "→ самые важные слова (вы выбираете количество)\n\n"
+
+        "📈 *Частотный анализ*\n"
+        "→ какие слова встречаются чаще всего\n\n"
+
+        "🧠 *Тональность*\n"
+        "→ позитивный / нейтральный / негативный\n\n"
+
+        "📌 Как это работает:\n"
+        "1. Отправьте файл или текст\n"
+        "2. Выберите режим\n"
+        "3. Получите анализ\n"
+        "4. При необходимости — измените режим без повторной загрузки",
+        parse_mode="Markdown",
+        reply_markup=get_mode_keyboard()
+    )
+
+async def example(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📌 Пример работы:\n\n"
+        "Вы отправляете:\n"
+        "📄 PDF со статьёй\n\n"
+        "Выбираете:\n"
+        "📝 Краткое содержание\n\n"
+        "Я возвращаю:\n"
+        "• Основную мысль\n"
+        "• Ключевые выводы\n"
+        "• Короткое резюме"
     )
