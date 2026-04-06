@@ -1,8 +1,13 @@
 import sqlite3
+import os
 
-DB_PATH = "tg_bot/state.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "state.db")
 
 def init_db():
+    print("🔥 INIT DB CALLED")
+    print("DB PATH:", DB_PATH)
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
