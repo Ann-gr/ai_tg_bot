@@ -14,26 +14,6 @@ def clean_ai_response(text: str) -> str:
 
     return text
 
-def validate_structure(text: str, mode: str) -> str:
-    if not text:
-        return "⚠️ Пустой ответ от AI"
-
-    if mode == "analysis":
-        required = ["Краткое содержание", "Тема"]
-    elif mode == "summary":
-        required = ["📝 Краткое содержание"]
-    elif mode == "keywords":
-        required = ["Ключевые слова"]
-    elif mode == "frequency":
-        required = ["Частотные слова"]
-    else:
-        return text
-
-    if not all(section in text for section in required):
-        return "⚠️ AI вернул некорректный ответ. Попробуйте ещё раз."
-
-    return text
-
 def limit_length(text: str, max_chars: int = 3500) -> str:
     if len(text) > max_chars:
         return text[:max_chars] + "\n\n... (ответ сокращён)"
@@ -41,6 +21,5 @@ def limit_length(text: str, max_chars: int = 3500) -> str:
 
 def format_response(text: str, mode: str) -> str:
     text = clean_ai_response(text)
-    text = validate_structure(text, mode)
     text = limit_length(text)
     return text
