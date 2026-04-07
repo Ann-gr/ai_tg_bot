@@ -65,5 +65,5 @@ class StateManager:
     def add_message(self, user_id, role, content):
         add_history(user_id, role, content)
 
-    def get_history(self, user_id, limit=10):
+    def get_history(self, user_id, limit=6):
         return get_history(user_id, limit)

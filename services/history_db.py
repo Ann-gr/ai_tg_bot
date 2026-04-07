@@ -20,7 +20,7 @@ async def get_history(user_id):
             FROM history
             WHERE user_id = $1
             ORDER BY id DESC
-            LIMIT 10
+            LIMIT 6
             """,
             str(user_id)
         )

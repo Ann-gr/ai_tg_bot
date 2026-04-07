@@ -58,7 +58,7 @@ def add_history(user_id, role, content):
     conn.commit()
     conn.close()
 
-def get_history(user_id, limit=10):
+def get_history(user_id, limit=6):
     conn = get_connection()
     cursor = conn.cursor()
 

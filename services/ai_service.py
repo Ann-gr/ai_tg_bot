@@ -9,7 +9,8 @@ async def analyze_with_ai(messages):
 
     payload = {
         "model": MODEL,
-        "messages": messages
+        "messages": messages,
+        "max_tokens": 1000 if len(messages) > 5 else 1500
     }
 
     try:
