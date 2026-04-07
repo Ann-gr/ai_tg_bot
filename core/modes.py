@@ -19,6 +19,15 @@ Do not change section names.
 Do not translate them.
 Do not add any extra text.
 
+STRICT OUTPUT CONTROL:
+- Follow ONLY the requested mode
+- Do NOT include sections from other modes
+- Do NOT add extra sections
+- Do NOT repeat sections
+- Do NOT duplicate content
+- Do NOT add introductions or conclusions
+- Do NOT explain what you are doing
+
 Example output:
 
 Краткое содержание:
@@ -76,7 +85,6 @@ Return the result in the following structure:
         "prompt": """
 Create a short summary of the text.
 Return the result in the following structure:
-Краткое содержание:
 (2–4 предложения, без списков)
 """
     },
@@ -119,8 +127,6 @@ Rules:
         "prompt": """
 Analyze the tone of the text.
 Return the result in the following structure:
-
-Тональность:
 (позитивная / негативная / нейтральная)
 
 Объяснение:
