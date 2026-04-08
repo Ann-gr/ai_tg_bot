@@ -81,7 +81,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = text[:MAX_TEXT_LENGTH]
 
         # Сохраняем в state
-        state_manager.update_state(user_id, last_text=text)
+        await state_manager.update_state(user_id, last_text=text)
 
         await update.message.reply_text(
             "✅ Файл успешно загружен\n\nВыберите режим анализа:",
