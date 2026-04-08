@@ -8,7 +8,7 @@ from handlers.keyboards import (
     get_main_menu_keyboard,
     get_back_keyboard,
 )
-from services.analysis_flow import process_analysis
+from services.analysis_flow import process_user_input
 from state import state_manager
 from utils.text_utils import shorten_text
 from utils.mode_utils import get_mode_title
@@ -100,21 +100,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=get_param_keyboard(mode),
             )
             return
-
-        await run_and_show_result(query, user_id, state)
-        return
-    
-    if data.startswith("mode:"):
-        mode = data.split(":")[1]
-        state["mode"] = mode
-
-        await state_manager.update_state(user_id, **state)
-
+        
         if mode == "qa":
             await query.edit_message_text(
                 "❓ Введите ваш вопрос по тексту:"
             )
             return
+
+        await run_and_show_result(query, user_id, state)
+        return
 
     if data.startswith("param:"):
         _, mode, value = data.split(":")
@@ -163,9 +157,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def run_and_show_result(query, user_id, state):
     await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
 
-    data = await process_analysis(user_id, state)
+    data = await process_user_input(user_id, state)
 
-    if data["error"]:
+    if data.get("error"):
         await query.edit_message_text(data["error"])
         return
 
@@ -175,7 +169,6 @@ async def run_and_show_result(query, user_id, state):
     await state_manager.update_state(user_id, **state)
 
     title = get_mode_title(state.get("mode"))
-
     short_text, is_truncated = shorten_text(result)
 
     formatted_text = (

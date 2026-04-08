@@ -3,10 +3,14 @@ import os
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from handlers.keyboards import get_mode_keyboard
+from handlers.keyboards import get_mode_keyboard, get_result_keyboard
 from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
+from services.analysis_flow import process_user_input
+
+from utils.mode_utils import get_mode_title
+from utils.text_utils import shorten_text
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_TEXT_LENGTH = 20000
@@ -14,31 +18,53 @@ MAX_TEXT_LENGTH = 20000
 SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
 
 # ОБРАБОТКА ТЕКСТА
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update, context):
     user_id = update.effective_user.id
     text = update.message.text
 
     state = await state_manager.get_state(user_id)
 
-    # если режим вопроса → сохраняем вопрос
-    if state.get("mode") == "qa" and state.get("last_text"):
-        state["question"] = text
-        await state_manager.update_state(user_id, **state)
+    data = await process_user_input(user_id, state, text)
 
-        await update.message.reply_text(
-            "✅ Вопрос сохранён, выполняю анализ..."
-        )
-
-        # запускаем анализ
+    # ошибки
+    if data.get("error"):
+        await update.message.reply_text(data["error"])
         return
 
-    # обычная логика
-    await state_manager.update_state(user_id, last_text=text)
+    # выбрать режим
+    if data.get("action") == "ask_mode":
+        await state_manager.update_state(user_id, **data["state"])
 
-    await update.message.reply_text(
-        "✅ Текст загружен\n\nВыберите режим анализа:",
-        reply_markup=get_mode_keyboard(),
-    )
+        await update.message.reply_text(
+            "✅ Текст загружен\n\nВыберите режим анализа:",
+            reply_markup=get_mode_keyboard(),
+        )
+        return
+
+    # спросить вопрос
+    if data.get("action") == "ask_question":
+        await state_manager.update_state(user_id, **data["state"])
+
+        await update.message.reply_text("❓ Введите вопрос по тексту:")
+        return
+
+    # показать результат
+    if data.get("action") == "show_result":
+        result = data["result"]
+
+        await state_manager.update_state(
+            user_id,
+            **data["state"],
+            last_result=result
+        )
+
+        title = get_mode_title(state.get("mode"))
+        short_text, is_truncated = shorten_text(result)
+
+        await update.message.reply_text(
+            f"{title}\n\n{short_text}",
+            reply_markup=get_result_keyboard(is_truncated),
+        )
 
 # ОБРАБОТКА ФАЙЛОВ
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
