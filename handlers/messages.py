@@ -33,7 +33,8 @@ async def handle_message(update, context):
 
     # выбрать режим
     if data.get("action") == "ask_mode":
-        await state_manager.update_state(user_id, **data["state"])
+        state = data["state"]
+        await state_manager.update_state(user_id, **state)
 
         await update.message.reply_text(
             "✅ Текст загружен\n\nВыберите режим анализа:",
@@ -43,7 +44,8 @@ async def handle_message(update, context):
 
     # спросить вопрос
     if data.get("action") == "ask_question":
-        await state_manager.update_state(user_id, **data["state"])
+        state = data["state"]
+        await state_manager.update_state(user_id, **state)
 
         await update.message.reply_text("❓ Введите вопрос по тексту:")
         return
@@ -51,14 +53,14 @@ async def handle_message(update, context):
     # показать результат
     if data.get("action") == "show_result":
         result = data["result"]
+        
+        state = data["state"]
+        state["last_result"] = result
+        state["question"] = None
 
-        await state_manager.update_state(
-            user_id,
-            **data["state"],
-            question=None
-        )
+        await state_manager.update_state(user_id, **state)
 
-        title = get_mode_title(state.get("mode"))
+        title = get_mode_title(data["state"].get("mode"))
         short_text, is_truncated = shorten_text(result)
 
         await update.message.reply_text(
@@ -108,7 +110,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = text[:MAX_TEXT_LENGTH]
 
         # Сохраняем в state
-        await state_manager.update_state(user_id, last_text=text)
+        await state_manager.update_state(
+            user_id,
+            last_text=text,
+            question=None  # 🔥 сброс QA режима
+        )
 
         await update.message.reply_text(
             "✅ Файл успешно загружен\n\nВыберите режим анализа:",

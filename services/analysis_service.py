@@ -3,8 +3,6 @@ from core.prompt_builder import create_prompt
 from services.ai_service import analyze_with_ai
 # форматирование ответа
 from utils.formatter import format_response
-# добавляем историю
-from services.history_db import add_message_db, get_history_db
 
 async def run_analysis(user_id, text, state):
     mode = state.get("mode", "analysis")
@@ -29,26 +27,11 @@ async def run_analysis(user_id, text, state):
             freq_n=n
         )
 
-    history = await get_history_db(user_id, limit=6)
-
     messages = [
-        {"role": "system", "content": "You are a precise text analysis assistant."}
+        {"role": "system", "content": "You are a precise text analysis assistant."},
+        {"role": "user", "content": prompt}
     ]
-
-    messages += history
-
-    messages.append({
-        "role": "user",
-        "content": prompt
-    })
 
     ai_result = await analyze_with_ai(messages)
 
-    def is_real_text(text):
-        return isinstance(text, str) and len(text.strip()) > 0
-
-    # сохраняем только диалог
-    if is_real_text(ai_result):
-        await add_message_db(user_id, "user", text)
-        await add_message_db(user_id, "assistant", ai_result)
     return format_response(ai_result, mode)

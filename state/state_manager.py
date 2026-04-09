@@ -17,5 +17,8 @@ class StateManager:
 
     async def update_state(self, user_id, **kwargs):
         state = await self.get_state(user_id)
-        state.update(kwargs)
+
+        for key, value in kwargs.items():
+            state[key] = value
+            
         await save_state_db(user_id, state)

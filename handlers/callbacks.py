@@ -102,6 +102,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         if mode == "qa":
+            state["question"] = None
+            await state_manager.update_state(user_id, **state)
+            
             await query.edit_message_text(
                 "❓ Введите ваш вопрос по тексту:"
             )
