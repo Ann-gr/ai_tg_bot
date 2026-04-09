@@ -102,9 +102,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         if mode == "qa":
-            state["question"] = None
-            await state_manager.update_state(user_id, **state)
-            
             await query.edit_message_text(
                 "❓ Введите ваш вопрос по тексту:"
             )
@@ -153,8 +150,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(
             f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(False),
+            reply_markup=get_result_keyboard(state.get("mode"), False),
         )
+        return
+    
+    if data == "action:ask_more":
+        state["mode"] = "qa"
+        await state_manager.update_state(user_id, **state)
+
+        await query.edit_message_text(
+            "❓ Задайте следующий вопрос:", 
+            reply_markup=get_back_keyboard())
         return
 
 async def run_and_show_result(query, user_id, state):
@@ -169,6 +175,7 @@ async def run_and_show_result(query, user_id, state):
     result = data["result"]
 
     state["last_result"] = result
+    state["question"] = None
     await state_manager.update_state(user_id, **state)
 
     title = get_mode_title(state.get("mode"))
@@ -184,5 +191,5 @@ async def run_and_show_result(query, user_id, state):
 
     await query.edit_message_text(
         formatted_text,
-        reply_markup=get_result_keyboard(is_truncated),
+        reply_markup=get_result_keyboard(state.get("mode"), is_truncated),
     )

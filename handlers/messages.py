@@ -56,7 +56,6 @@ async def handle_message(update, context):
         
         state = data["state"]
         state["last_result"] = result
-        state["question"] = None
 
         await state_manager.update_state(user_id, **state)
 
@@ -65,7 +64,7 @@ async def handle_message(update, context):
 
         await update.message.reply_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(is_truncated),
+            reply_markup=get_result_keyboard(state.get("mode"), is_truncated),
         )
         return
 

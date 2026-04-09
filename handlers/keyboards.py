@@ -29,13 +29,18 @@ def get_param_keyboard(mode):
 
     return InlineKeyboardMarkup(keyboard)
 
-def get_result_keyboard(is_truncated=False):
+def get_result_keyboard(mode, is_truncated=False):
     keyboard = []
 
     if is_truncated:
         keyboard.append([
             InlineKeyboardButton("📖 Показать полностью", callback_data="action:full_result")
     ])
+        
+    if mode == "qa":
+        keyboard.append([
+            InlineKeyboardButton("💬 Задать ещё вопрос", callback_data="action:ask_more"),
+        ])
 
     keyboard.extend([
         [

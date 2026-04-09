@@ -9,23 +9,15 @@ async def run_analysis(user_id, text, state):
 
     params = state.get("params", {})
     n = params.get("n", 10)
+    question = state.get("question", None)
 
-    if mode == "qa":
-        question = state.get("question", "")
-
-        prompt = create_prompt(
-            text + f"\n\nQUESTION:\n{question}",
-            mode,
-            top_n=n,
-            freq_n=n
-        )
-    else:
-        prompt = create_prompt(
-            text,
-            mode,
-            top_n=n,
-            freq_n=n
-        )
+    prompt = create_prompt(
+        text,
+        mode,
+        top_n=n,
+        freq_n=n,
+        question=question
+    )
 
     messages = [
         {"role": "system", "content": "You are a precise text analysis assistant."},

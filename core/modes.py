@@ -117,7 +117,7 @@ Return the result in the following structure:
     "label": "❓ Вопрос по тексту",
     "needs_param": False,
     "prompt": """
-Answer the user's question based ONLY on the provided text.
+Answer the user's question: {question}. Use ONLY the provided text.
 
 Return:
 Ответ:
