@@ -23,6 +23,7 @@ async def get_state_db(user_id):
         "last_text": row["last_text"],
         "last_result": row["last_result"],
         "qa_history": json.loads(row["qa_history"] or "[]"),
+        "analysis_history": json.loads(row["analysis_history"] or "[]"),
     }
 
 
@@ -47,4 +48,5 @@ async def save_state_db(user_id, state):
             state.get("last_text"),
             state.get("last_result"),
             json.dumps(state.get("qa_history", []), ensure_ascii=False),
+            json.dumps(state.get("analysis_history", []), ensure_ascii=False),
         )
