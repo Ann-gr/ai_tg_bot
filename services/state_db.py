@@ -7,7 +7,7 @@ async def get_state_db(user_id):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT mode, params, last_text, last_result, qa_history
+            SELECT mode, params, last_text, last_result, qa_history, analysis_history
             FROM user_state
             WHERE user_id = $1
             """,
@@ -33,7 +33,7 @@ async def save_state_db(user_id, state):
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO user_state (user_id, mode, params, last_text, last_result, qa_history)
+            INSERT INTO user_state (user_id, mode, params, last_text, last_result, qa_history, analysis_history)
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (user_id) DO UPDATE SET
                 mode = EXCLUDED.mode,
