@@ -40,8 +40,6 @@ def get_result_keyboard(mode, is_truncated=False):
     if mode == "qa":
         keyboard.append([
             InlineKeyboardButton("💬 Задать ещё вопрос", callback_data="action:ask_more"),
-        ])
-        keyboard.append([
             InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
         ])
 
@@ -67,24 +65,18 @@ def get_main_menu_keyboard(mode, has_text=False):
 
     if has_text:
         keyboard.append([
-            InlineKeyboardButton("🔁 Повторить анализ", callback_data="action:repeat")
-        ])
-        keyboard.append([
-            InlineKeyboardButton("⚙️ Выбрать режим", callback_data="action:change_mode")
+            InlineKeyboardButton("🔁 Повторить анализ", callback_data="action:repeat"),
+            InlineKeyboardButton("⚙️ Выбрать другой режим", callback_data="action:change_mode")
         ])
 
     if mode == "qa":
         keyboard.append([
             InlineKeyboardButton("💬 Задать вопрос по тексту", callback_data="action:ask_more"),
-        ])
-        keyboard.append([
             InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
         ])
 
     keyboard.append([
-        InlineKeyboardButton("🧠 Помощь", callback_data="go:help")
-    ])
-    keyboard.append([
+        InlineKeyboardButton("🧠 Помощь", callback_data="go:help"),
         InlineKeyboardButton("🧷 Пример работы", callback_data="go:example")
     ])
 
