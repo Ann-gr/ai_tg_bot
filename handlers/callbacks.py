@@ -170,7 +170,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         history = state.get("qa_history", [])[-5:]
 
         if not history:
-            await query.edit_message_text("❌ История пуста")
+            await query.edit_message_text(
+                "❌ История пуста",
+                reply_markup=get_back_keyboard())
             return
 
         text = "📜 История вопросов:\n\n"
@@ -189,7 +191,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         history = state.get("analysis_history", [])
 
         if not history:
-            await query.edit_message_text("❌ История анализов пуста")
+            await query.edit_message_text(
+                "❌ История анализов пуста",
+                reply_markup=get_back_keyboard())
             return
 
         text = "📊 История анализов:\n\n"

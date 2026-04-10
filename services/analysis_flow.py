@@ -20,32 +20,11 @@ async def process_user_input(user_id, state, text=None):
 
         result = await run_analysis(user_id, state["last_text"], state)
 
-        # сохраняем в историю
-        history = state.get("qa_history", [])
-        history.append({
-            "q": state["question"],
-            "a": result
-        })
-
-        # ограничение
-        state["qa_history"] = history[-5:]
-
         return {
             "action": "show_result",
             "result": result,
             "state": state
         }
-    
-    # история анализов
-    if mode != "qa":
-        history = state.get("analysis_history", [])
-
-        history.append({
-            "mode": mode,
-            "result": result
-        })
-
-        state["analysis_history"] = history[-10:]
 
     # Если пришёл новый текст (НЕ QA)
     if text:
@@ -61,6 +40,22 @@ async def process_user_input(user_id, state, text=None):
         return {"error": "Сначала отправьте текст"}
 
     result = await run_analysis(user_id, state["last_text"], state)
+
+    # единая точка сохранения истории вопросов и анализов
+    if mode == "qa":
+        qa_history = state.get("qa_history", [])
+        qa_history.append({
+            "q": state.get("question"),
+            "a": result
+        })
+        state["qa_history"] = qa_history[-10:]
+    else:
+        analysis_history = state.get("analysis_history", [])
+        analysis_history.append({
+            "mode": mode,
+            "result": result
+        })
+        state["analysis_history"] = analysis_history[-10:]
 
     return {
         "action": "show_result",
