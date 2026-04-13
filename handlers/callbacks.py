@@ -2,18 +2,31 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from handlers.keyboards import (
-    get_mode_keyboard,
+    get_empty_keyboard,
+    get_modes_keyboard,
     get_param_keyboard,
     get_result_keyboard,
-    get_main_menu_keyboard,
     get_back_keyboard,
-    get_analysis_history_keyboard
+    get_analysis_history_keyboard,
+    get_history_back_keyboard,
+    get_qa_keyboard,
+    get_history_menu
 )
 from services.analysis_flow import process_user_input
 from state import state_manager
+from state.state_manager import resolve_ui_state
 from utils.text_utils import shorten_text
 from utils.mode_utils import get_mode_title
 from utils.params import build_params
+
+def parse_callback(data: str):
+    """
+    Разбирает callback_data в action + payload
+    """
+    if ":" in data:
+        action, *rest = data.split(":")
+        return action, rest
+    return data, []
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -22,34 +35,29 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     state = await state_manager.get_state(user_id)
 
-    data = query.data
+    action, payload = parse_callback(query.data)
 
-    # UI навигация
-    if data == "go:menu":
-        await state_manager.update_state(user_id, **state)
-        has_text = bool(state.get("last_text"))
-        mode_title = get_mode_title(state.get("mode"))
+    handler = ACTION_MAP.get(action)
 
-        await query.edit_message_text(
-            "📊 Главное меню\n\n"
-            f"Текущий режим: {mode_title}\n\n"
-            "Выберите действие:",
-            reply_markup=get_main_menu_keyboard(state, has_text)
-        )
+    if not handler:
+        await query.edit_message_text("❌ Неизвестное действие")
         return
 
-    elif data == "go:upload":
-        await state_manager.update_state(user_id, **state)
+    await handler(query, context, user_id, state, payload)
 
+async def handle_go(query, context, user_id, state, payload):
+    target = payload[0] if payload else None
+
+    if target == "menu":
+        await show_menu(query, state)
+
+    elif target == "upload":
         await query.edit_message_text(
             "📂 Отправьте текст или файл",
             reply_markup=get_back_keyboard()
         )
-        return
 
-    elif data == "go:help":
-        await state_manager.update_state(user_id, **state)
-
+    elif target == "help":
         await query.edit_message_text(
             "🧠 *Режимы анализа*\n\n"
             "📊 *Общий анализ*\n"
@@ -72,179 +80,205 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=get_back_keyboard()
         )
-        return
-    
-    elif data == "go:example":
-        await state_manager.update_state(user_id, **state)
 
+    elif target == "history":
         await query.edit_message_text(
-            "📌 Пример работы:\n\n"
-            "Вы отправляете:\n"
-            "📄 PDF со статьёй\n\n"
-            "Выбираете:\n"
-            "📝 Краткое содержание\n\n"
-            "Я возвращаю:\n"
-            "• Основную мысль\n"
-            "• Ключевые выводы\n"
-            "• Короткое резюме",
-            reply_markup=get_back_keyboard()
+            "📜 История",
+            reply_markup=get_history_menu()
+        )
+
+async def handle_mode(query, context, user_id, state, payload):
+    mode = payload[0]
+    state["mode"] = mode
+
+    await state_manager.update_state(user_id, **state)
+
+    if mode in ["keywords", "frequency"]:
+        await query.edit_message_text(
+            "Выберите количество:",
+            reply_markup=get_param_keyboard(mode)
         )
         return
 
-    if data.startswith("mode:"):
-        mode = data.split(":")[1]
-        state["mode"] = mode
-        
+    if mode == "qa":
+        state["ui_state"] = "QA"
         await state_manager.update_state(user_id, **state)
 
-        if mode in ["keywords", "frequency"]:
-            await query.edit_message_text(
-                "Выберите количество:",
-                reply_markup=get_param_keyboard(mode),
-            )
-            return
-        
-        if mode == "qa":
-            await query.edit_message_text(
-                "❓ Введите ваш вопрос по тексту:",
-                reply_markup=get_back_keyboard(),
-            )
-            return
-
-        await run_and_show_result(query, user_id, state)
-        return
-
-    if data.startswith("param:"):
-        _, mode, value = data.split(":")
-        state["mode"] = mode
-        state["params"] = build_params(mode, value)
-        await state_manager.update_state(user_id, **state)
-
-        await run_and_show_result(query, user_id, state)
-        return
-
-    if data == "action:repeat":
-        await run_and_show_result(query, user_id, state)
-        return
-
-    if data == "action:change_mode":
         await query.edit_message_text(
-            "⚙️ Выберите новый режим анализа:",
-            reply_markup=get_mode_keyboard(),
+            "❓ Введите вопрос:",
+            reply_markup=get_qa_keyboard()
         )
         return
 
-    if data == "action:new_text":
+    await run_and_show_result(query, user_id, state)
+
+async def handle_param(query, context, user_id, state, payload):
+    mode, value = payload
+
+    state["mode"] = mode
+    state["params"] = build_params(mode, value)
+
+    await state_manager.update_state(user_id, **state)
+
+    await run_and_show_result(query, user_id, state)
+
+async def handle_action(query, context, user_id, state, payload):
+    action = payload[0]
+
+    if action == "repeat":
+        await run_and_show_result(query, user_id, state)
+
+    elif action == "new_text":
         state["last_text"] = None
+        state["last_result"] = None
+
         await state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
-            "📂 Отправьте новый текст или файл", 
-            reply_markup=get_back_keyboard())
-        return
-    
-    if data == "action:full_result":
-        full_text = state.get("last_result", "")
-
-        if not full_text:
-            await query.edit_message_text("❌ Нет результата")
-            return
-        
-        title = get_mode_title(state.get("mode"))
-
-        await query.edit_message_text(
-            f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(state, False),
-        )
-        return
-    
-    if data == "action:ask_more":
-        state["mode"] = "qa"
-        await state_manager.update_state(user_id, **state)
-
-        await query.edit_message_text(
-            "❓ Задайте следующий вопрос:", 
-            reply_markup=get_back_keyboard())
-        return
-    
-    if data == "action:qa_history":
-        history = state.get("qa_history", [])[-5:]
-
-        if not history:
-            await query.edit_message_text(
-                "❌ История пуста",
-                reply_markup=get_back_keyboard())
-            return
-
-        text = "📜 История вопросов:\n\n"
-
-        for item in history[-5:]:
-            text += f"❓ {item['q']}\n"
-            text += f"{item['a']}\n\n"
-
-        await query.edit_message_text(
-            text,
+            "📂 Отправьте новый текст",
             reply_markup=get_back_keyboard()
         )
-        return
-    
-    if data == "action:analysis_history":
+
+    elif action == "change_mode":
+        state["last_result"] = None
+        await state_manager.update_state(user_id, **state)
+
+        await query.edit_message_text(
+            "🧠 Что вы хотите узнать из текста?",
+            reply_markup=get_modes_keyboard()
+        )
+
+    elif action == "ask_more":
+        state["mode"] = "qa"
+        state["ui_state"] = "QA"
+
+        await state_manager.update_state(user_id, **state)
+
+        await query.edit_message_text(
+            "❓ Напишите вопрос:",
+            reply_markup=get_qa_keyboard()
+        )
+
+    elif action == "analysis_history":
         history = state.get("analysis_history", [])
 
         if not history:
             await query.edit_message_text(
                 "❌ История анализов пуста",
-                reply_markup=get_back_keyboard())
+                reply_markup=get_back_keyboard()
+            )
             return
 
         await query.edit_message_text(
             "📊 История анализов:",
             reply_markup=get_analysis_history_keyboard(history)
         )
-        return
-    
-    if data.startswith("analysis_item:"):
-        item_id = data.split(":")[1]
 
-        history = state.get("analysis_history", [])
+    elif action == "qa_history":
+        history = state.get("qa_history", [])
 
-        item = next((x for x in history if x["id"] == item_id), None)
-
-        if not item:
+        if not history:
             await query.edit_message_text(
-                "❌ Анализ не найден",
+                "❌ История вопросов пуста",
                 reply_markup=get_back_keyboard()
             )
             return
 
-        title = get_mode_title(item["mode"])
+        text = "📜 История вопросов:\n\n"
+
+        for item in history[-5:]:
+            text += f"❓ {item['q']}\n{item['a']}\n\n"
 
         await query.edit_message_text(
-            f"{title}\n\n{item['result']}",
-            reply_markup=get_back_keyboard()
+            text,
+            reply_markup=get_history_back_keyboard()
         )
-        return
-    
-    if data == "action:clear_qa":
+
+    elif action == "clear_all":
         state["qa_history"] = []
-        await state_manager.update_state(user_id, **state)
-
-        await query.edit_message_text(
-            "🧹 История вопросов очищена",
-            reply_markup=get_back_keyboard()
-        )
-        return
-
-
-    if data == "action:clear_analysis":
         state["analysis_history"] = []
+
         await state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
-            "🧹 История анализов очищена",
+            "🧹 История очищена",
+            reply_markup=get_back_keyboard()
+        )
+
+    elif action == "short_result":
+        short_text, is_truncated = shorten_text(state.get("last_result"))
+
+        title = get_mode_title(state.get("mode"))
+
+        await query.edit_message_text(
+            f"{title}\n\n{short_text}",
+            reply_markup=get_result_keyboard(is_truncated),
+        )
+
+    elif action == "full_result":
+        full_text = state.get("last_result")
+
+        if not full_text:
+            await query.edit_message_text(
+                "❌ Нет результата",
+                reply_markup=get_back_keyboard()
+            )
+            return
+
+        title = get_mode_title(state.get("mode"))
+
+        await query.edit_message_text(
+            f"{title}\n\n{full_text}",
+            reply_markup=get_result_keyboard(False),
+        )
+
+async def handle_analysis_item(query, context, user_id, state, payload):
+    item_id = payload[0]
+
+    history = state.get("analysis_history", [])
+
+    item = next((x for x in history if x["id"] == item_id), None)
+
+    if not item:
+        await query.edit_message_text(
+            "❌ Анализ не найден",
             reply_markup=get_back_keyboard()
         )
         return
+
+    title = get_mode_title(item["mode"])
+
+    await query.edit_message_text(
+        f"{title}\n\n{item['result']}",
+        reply_markup=get_history_back_keyboard()
+    )
+
+async def show_menu(query, state):
+    ui = state.get("ui_state") or resolve_ui_state(state)
+
+    if ui == "EMPTY":
+        await query.edit_message_text(
+            "📂 Отправьте текст",
+            reply_markup=get_empty_keyboard()
+        )
+
+    elif ui == "TEXT_LOADED":
+        await query.edit_message_text(
+            "🧠 Что вы хотите узнать из текста?",
+            reply_markup=get_modes_keyboard()
+        )
+
+    elif ui == "RESULT":
+        await query.edit_message_text(
+            "📊 Выберите действие:",
+            reply_markup=get_result_keyboard()
+        )
+
+    elif ui == "QA":
+        await query.edit_message_text(
+            "❓ Задайте вопрос:",
+            reply_markup=get_qa_keyboard()
+        )
 
 async def run_and_show_result(query, user_id, state):
     await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
@@ -264,6 +298,7 @@ async def run_and_show_result(query, user_id, state):
     state = data["state"]
     state["last_result"] = result
     state["question"] = None
+    state["ui_state"] = "RESULT"
 
     await state_manager.update_state(user_id, **state)
 
@@ -280,5 +315,13 @@ async def run_and_show_result(query, user_id, state):
 
     await query.edit_message_text(
         formatted_text,
-        reply_markup=get_result_keyboard(state, is_truncated),
+        reply_markup=get_result_keyboard(),
     )
+
+ACTION_MAP = {
+    "go": handle_go,
+    "mode": handle_mode,
+    "param": handle_param,
+    "action": handle_action,
+    "analysis_item": handle_analysis_item
+}

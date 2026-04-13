@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from handlers.keyboards import get_main_menu_keyboard
+from handlers.keyboards import get_empty_keyboard
 from state import state_manager
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -13,5 +13,5 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Я бот для анализа текста и документов.\n\n"
         "📂 Отправьте текст/файл\n"
         "или выберите действие ниже 👇",
-        reply_markup=get_main_menu_keyboard(state, has_text)
+        reply_markup=get_empty_keyboard()
     )

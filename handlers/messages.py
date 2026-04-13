@@ -3,7 +3,7 @@ import os
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from handlers.keyboards import get_mode_keyboard, get_result_keyboard, get_back_keyboard
+from handlers.keyboards import get_modes_keyboard, get_result_keyboard
 from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
@@ -54,12 +54,13 @@ async def handle_message(update, context):
         # очищаем текущий текст
         state["qa_history"] = []
         state["analysis_history"] = []
+        state["ui_state"] = "TEXT_LOADED"
 
         await state_manager.update_state(user_id, **state)
 
         await update.message.reply_text(
             "✅ Текст загружен\n\nВыберите режим анализа:",
-            reply_markup=get_mode_keyboard(),
+            reply_markup=get_modes_keyboard(),
         )
         return
 
@@ -69,6 +70,7 @@ async def handle_message(update, context):
         
         state = data["state"]
         state["last_result"] = result
+        state["ui_state"] = "RESULT"
 
         await state_manager.update_state(user_id, **state)
 
@@ -77,7 +79,7 @@ async def handle_message(update, context):
 
         await loading_msg.edit_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(state, is_truncated),
+            reply_markup=get_result_keyboard(),
         )
         return
 
@@ -132,7 +134,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             "✅ Файл успешно загружен\n\nВыберите режим анализа:",
-            reply_markup=get_mode_keyboard(),
+            reply_markup=get_modes_keyboard(),
         )
 
     except FileProcessingError as e:
