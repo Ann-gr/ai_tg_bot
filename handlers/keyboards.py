@@ -41,13 +41,13 @@ def get_result_keyboard(state, is_truncated=False):
         keyboard.append([
             InlineKeyboardButton("💬 Задать ещё вопрос", callback_data="action:ask_more")
         ])
-        if state.get("qa_history"):
+        if len(state.get("qa_history", [])) > 0:
             keyboard.append([
                 InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
                 InlineKeyboardButton("🧹 Очистить историю вопросов", callback_data="action:clear_qa")
             ])
 
-    if state.get("analysis_history"):
+    if len(state.get("analysis_history", [])) > 0:
         keyboard.append([
             InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history"),
             InlineKeyboardButton("🧹 Очистить историю анализов", callback_data="action:clear_analysis")
@@ -81,23 +81,21 @@ def get_main_menu_keyboard(state, has_text=False):
         keyboard.append([
             InlineKeyboardButton("💬 Задать вопрос по тексту", callback_data="action:ask_more"),
         ])
-        if state.get("qa_history"):
+        if len(state.get("qa_history", [])) > 0:
             keyboard.append([
                 InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
                 InlineKeyboardButton("🧹 Очистить историю вопросов", callback_data="action:clear_qa")
             ])        
 
-    if state.get("analysis_history"):
+    if len(state.get("analysis_history", [])) > 0:
         keyboard.append([
             InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history"),
             InlineKeyboardButton("🧹 Очистить историю анализов", callback_data="action:clear_analysis")
         ]) 
 
     keyboard.append([
-        [
             InlineKeyboardButton("🧠 Помощь", callback_data="go:help"),
             InlineKeyboardButton("🧷 Пример работы", callback_data="go:example"),
-        ]
     ])
 
     return InlineKeyboardMarkup(keyboard)
