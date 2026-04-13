@@ -83,7 +83,7 @@ async def handle_message(update, context):
 
         await update.message.reply_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(state.get("mode"), is_truncated),
+            reply_markup=get_result_keyboard(state, is_truncated),
         )
         return
 
@@ -132,7 +132,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id,
             last_text=text,
             question=None,  # сброс QA режима
-            qa_history=[]  # сброс QA истории
+            qa_history=[],  # сброс QA истории
+            analysis_history = [] # сброс истории анализов
         )
 
         await update.message.reply_text(

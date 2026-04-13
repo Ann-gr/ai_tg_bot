@@ -33,7 +33,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 Главное меню\n\n"
             f"Текущий режим: {mode_title}\n\n"
             "Выберите действие:",
-            reply_markup=get_main_menu_keyboard(state.get("mode"), has_text)
+            reply_markup=get_main_menu_keyboard(state, has_text)
         )
         return
 
@@ -153,7 +153,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.edit_message_text(
             f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(state.get("mode"), False),
+            reply_markup=get_result_keyboard(state, False),
         )
         return
     
@@ -207,6 +207,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=get_back_keyboard()
         )
         return
+    
+    if data == "action:clear_qa":
+        state["qa_history"] = []
+        await state_manager.update_state(user_id, **state)
+
+        await query.edit_message_text(
+            "🧹 История вопросов очищена",
+            reply_markup=get_back_keyboard()
+        )
+        return
+
+
+    if data == "action:clear_analysis":
+        state["analysis_history"] = []
+        await state_manager.update_state(user_id, **state)
+
+        await query.edit_message_text(
+            "🧹 История анализов очищена",
+            reply_markup=get_back_keyboard()
+        )
+        return
 
 async def run_and_show_result(query, user_id, state):
     await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
@@ -232,7 +253,7 @@ async def run_and_show_result(query, user_id, state):
     state = data["state"]
     state["last_result"] = result
     state["question"] = None
-    
+
     await state_manager.update_state(user_id, **state)
 
     title = get_mode_title(state.get("mode"))
@@ -248,5 +269,5 @@ async def run_and_show_result(query, user_id, state):
 
     await query.edit_message_text(
         formatted_text,
-        reply_markup=get_result_keyboard(state.get("mode"), is_truncated),
+        reply_markup=get_result_keyboard(state, is_truncated),
     )

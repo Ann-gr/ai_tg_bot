@@ -29,7 +29,7 @@ def get_param_keyboard(mode):
 
     return InlineKeyboardMarkup(keyboard)
 
-def get_result_keyboard(mode, is_truncated=False):
+def get_result_keyboard(state, is_truncated=False):
     keyboard = []
 
     if is_truncated:
@@ -37,29 +37,36 @@ def get_result_keyboard(mode, is_truncated=False):
             InlineKeyboardButton("📖 Показать полностью", callback_data="action:full_result")
     ])
         
-    if mode == "qa":
+    if state.get("mode") == "qa":
         keyboard.append([
-            InlineKeyboardButton("💬 Задать ещё вопрос", callback_data="action:ask_more"),
-            InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
+            InlineKeyboardButton("💬 Задать ещё вопрос", callback_data="action:ask_more")
+        ])
+        if state.get("qa_history"):
+            keyboard.append([
+                InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
+                InlineKeyboardButton("🧹 Очистить историю вопросов", callback_data="action:clear_qa")
+            ])
+
+    if state.get("analysis_history"):
+        keyboard.append([
+            InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history"),
+            InlineKeyboardButton("🧹 Очистить историю анализов", callback_data="action:clear_analysis")
         ])
 
     keyboard.extend([
         [
             InlineKeyboardButton("🔁 Повторить", callback_data="action:repeat"),
+            InlineKeyboardButton("⬅️ В меню", callback_data="go:menu")
         ],
         [
             InlineKeyboardButton("⚙️ Изменить режим", callback_data="action:change_mode"),
             InlineKeyboardButton("🆕 Новый текст", callback_data="action:new_text"),
-        ],
-        [
-            InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history"),
-            InlineKeyboardButton("⬅️ В меню", callback_data="go:menu")
         ]
     ])
 
     return InlineKeyboardMarkup(keyboard)
 
-def get_main_menu_keyboard(mode, has_text=False):
+def get_main_menu_keyboard(state, has_text=False):
     keyboard = [
         [InlineKeyboardButton("📂 Загрузить текст", callback_data="go:upload")],
     ]
@@ -70,16 +77,27 @@ def get_main_menu_keyboard(mode, has_text=False):
             InlineKeyboardButton("⚙️ Выбрать другой режим", callback_data="action:change_mode")
         ])
 
-    if mode == "qa":
+    if state.get("mode") == "qa":
         keyboard.append([
             InlineKeyboardButton("💬 Задать вопрос по тексту", callback_data="action:ask_more"),
-            InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
         ])
+        if state.get("qa_history"):
+            keyboard.append([
+                InlineKeyboardButton("📜 История вопросов", callback_data="action:qa_history"),
+                InlineKeyboardButton("🧹 Очистить историю вопросов", callback_data="action:clear_qa")
+            ])        
+
+    if state.get("analysis_history"):
+        keyboard.append([
+            InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history"),
+            InlineKeyboardButton("🧹 Очистить историю анализов", callback_data="action:clear_analysis")
+        ]) 
 
     keyboard.append([
-        InlineKeyboardButton("🧠 Помощь", callback_data="go:help"),
-        InlineKeyboardButton("🧷 Пример работы", callback_data="go:example"),
-        InlineKeyboardButton("📊 История анализов", callback_data="action:analysis_history")
+        [
+            InlineKeyboardButton("🧠 Помощь", callback_data="go:help"),
+            InlineKeyboardButton("🧷 Пример работы", callback_data="go:example"),
+        ]
     ])
 
     return InlineKeyboardMarkup(keyboard)

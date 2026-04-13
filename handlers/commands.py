@@ -13,5 +13,5 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Я бот для анализа текста и документов.\n\n"
         "📂 Отправьте текст/файл\n"
         "или выберите действие ниже 👇",
-        reply_markup=get_main_menu_keyboard(state.get("mode"), has_text)
+        reply_markup=get_main_menu_keyboard(state, has_text)
     )
