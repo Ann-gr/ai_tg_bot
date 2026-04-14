@@ -52,8 +52,12 @@ async def handle_message(update, context):
             state["archive"] = archive[-5:]
 
         # очищаем текущий текст
-        state["qa_history"] = []
-        state["analysis_history"] = []
+        for item in state.get("qa_history", []):
+            item["visible"] = False
+
+        for item in state.get("analysis_history", []):
+            item["visible"] = False
+            
         state["ui_state"] = "TEXT_LOADED"
 
         await state_manager.update_state(user_id, **state)

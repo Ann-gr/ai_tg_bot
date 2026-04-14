@@ -22,7 +22,8 @@ async def process_user_input(user_id, state, text=None):
 
         qa_history.append({
             "q": state.get("question"),
-            "a": result
+            "a": result,
+            "visible": True
         })
         
         state["qa_history"] = qa_history[-10:]
@@ -52,7 +53,8 @@ async def process_user_input(user_id, state, text=None):
     analysis_history.append({
         "id": str(uuid.uuid4()),
         "mode": mode,
-        "result": result
+        "result": result,
+        "visible": True
     })
     state["analysis_history"] = analysis_history[-10:]
 

@@ -160,7 +160,10 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "analysis_history":
-        history = state.get("analysis_history", [])
+        history = [
+            x for x in state.get("analysis_history", [])
+            if x.get("visible", True)
+        ]
 
         if not history:
             await query.edit_message_text(
@@ -175,7 +178,10 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "qa_history":
-        history = state.get("qa_history", [])
+        history = [
+            x for x in state.get("qa_history", [])
+            if x.get("visible", True)
+        ]
 
         if not history:
             await query.edit_message_text(
@@ -195,8 +201,11 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "clear_all":
-        state["qa_history"] = []
-        state["analysis_history"] = []
+        for item in state.get("qa_history", []):
+            item["visible"] = False
+
+        for item in state.get("analysis_history", []):
+            item["visible"] = False
 
         await state_manager.update_state(user_id, **state)
 
