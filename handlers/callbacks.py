@@ -215,13 +215,16 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "short_result":
+        state["result_view"] = "short"
+        await state_manager.update_state(user_id, **state)
+
         short_text, is_truncated = shorten_text(state.get("last_result"))
 
         title = get_mode_title(state.get("mode"))
 
         await query.edit_message_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(state["result_view"], is_truncated),
+            reply_markup=get_result_keyboard("short", is_truncated),
         )
 
     elif action == "full_result":
@@ -233,12 +236,17 @@ async def handle_action(query, context, user_id, state, payload):
                 reply_markup=get_back_keyboard()
             )
             return
+        
+        state["result_view"] = "full"
+        await state_manager.update_state(user_id, **state)
 
         title = get_mode_title(state.get("mode"))
 
+        _, is_truncated = shorten_text(full_text)
+
         await query.edit_message_text(
             f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(state["result_view"], is_truncated),
+            reply_markup=get_result_keyboard("full", is_truncated),
         )
 
 async def handle_analysis_item(query, context, user_id, state, payload):
