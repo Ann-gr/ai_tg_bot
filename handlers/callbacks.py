@@ -221,7 +221,7 @@ async def handle_action(query, context, user_id, state, payload):
 
         await query.edit_message_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(is_truncated),
+            reply_markup=get_result_keyboard(state["result_view"], is_truncated),
         )
 
     elif action == "full_result":
@@ -238,7 +238,7 @@ async def handle_action(query, context, user_id, state, payload):
 
         await query.edit_message_text(
             f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(False),
+            reply_markup=get_result_keyboard(state["result_view"], is_truncated),
         )
 
 async def handle_analysis_item(query, context, user_id, state, payload):
