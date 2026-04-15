@@ -14,7 +14,7 @@ from handlers.keyboards import (
 )
 from services.analysis_flow import process_user_input
 from services.analysis_repository import get_user_analysis, hide_all_analysis, get_analysis_by_id
-from services.qa_repository import hide_all_qa
+from services.qa_repository import get_user_qa, hide_all_qa
 from state import state_manager
 from state.state_manager import resolve_ui_state
 from utils.text_utils import shorten_text
@@ -159,14 +159,12 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "analysis_history":
-        history = [
-            x for x in state.get("analysis_history", [])           
-        ]
+        history = await get_user_analysis(user_id)
 
         if not history:
             await query.edit_message_text(
                 "❌ История анализов пуста",
-                reply_markup=get_back_keyboard()
+                reply_markup=get_history_back_keyboard()
             )
             return
 
@@ -176,14 +174,12 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "qa_history":
-        history = [
-            x for x in state.get("qa_history", [])
-        ]
+        history = await get_user_qa(user_id)
 
         if not history:
             await query.edit_message_text(
                 "❌ История вопросов пуста",
-                reply_markup=get_back_keyboard()
+                reply_markup=get_history_back_keyboard()
             )
             return
 
@@ -201,9 +197,16 @@ async def handle_action(query, context, user_id, state, payload):
         await hide_all_analysis(user_id)
         await hide_all_qa(user_id)
 
+        state["current_text_id"] = None
+        state["last_result_id"] = None
+        state["mode"] = "analysis"
+        state["ui_state"] = "EMPTY"
+
+        await state_manager.update_state(user_id, **state)
+
         await query.edit_message_text(
-            "🧹 История очищена",
-            reply_markup=get_back_keyboard()
+            "🧹 История очищена\n\n📂 Загрузите новый текст",
+            reply_markup=get_empty_keyboard()
         )
 
     elif action == "short_result":
@@ -235,7 +238,6 @@ async def handle_action(query, context, user_id, state, payload):
             full_text = await get_analysis_by_id(state.get("last_result_id"))
 
         if not full_text:
-            full_text = state.get("last_result")
             await query.edit_message_text(
                 "❌ Нет результата",
                 reply_markup=get_back_keyboard()
@@ -245,13 +247,10 @@ async def handle_action(query, context, user_id, state, payload):
         state["result_view"] = "full"
         await state_manager.update_state(user_id, **state)
 
-        title = get_mode_title(state.get("mode"))
-
-        _, is_truncated = shorten_text(full_text)
-
-        await query.edit_message_text(
-            f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard("full", is_truncated),
+        await render_result(
+            query.edit_message_text,
+            state,
+            full_text
         )
 
 async def handle_analysis_item(query, context, user_id, state, payload):

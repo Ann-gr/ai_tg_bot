@@ -28,6 +28,7 @@ async def process_user_input(user_id, state, new_text=None, user_question=None):
     # QA режим
     if state.get("mode") == "qa":
         analysis_id = None
+        state["last_result_id"] = None
         result = await run_analysis(user_id, text, state)
         # сохраняем в историю состояния
         qa_history = state.get("qa_history", [])

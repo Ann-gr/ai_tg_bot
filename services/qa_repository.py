@@ -25,3 +25,20 @@ async def hide_all_qa(user_id):
             "UPDATE qa_messages SET is_visible = FALSE WHERE user_id = $1",
             str(user_id)
         )
+
+async def get_user_qa(user_id):
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, question, answer
+            FROM qa_messages
+            WHERE user_id = $1 AND is_visible = TRUE
+            ORDER BY created_at DESC
+            LIMIT 10
+            """,
+            str(user_id)
+        )
+
+    return rows

@@ -22,7 +22,7 @@ async def run_analysis(user_id, text, state):
     )
 
     messages = [
-        {"role": "system", "content": "You are a precise text analysis assistant."},
+        {"role": "system", "content": "You are a precise text analysis assistant. Always respond in Russian"},
     ]
 
     # история диалога
