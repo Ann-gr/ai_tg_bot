@@ -186,7 +186,7 @@ async def handle_action(query, context, user_id, state, payload):
         text = "📜 История вопросов:\n\n"
 
         for item in history[-5:]:
-            text += f"❓ {item['q']}\n{item['a']}\n\n"
+            text += f"❓ {item['question']}\n{item['answer']}\n\n"
 
         await query.edit_message_text(
             text,
@@ -201,6 +201,8 @@ async def handle_action(query, context, user_id, state, payload):
         state["last_result_id"] = None
         state["mode"] = "analysis"
         state["ui_state"] = "EMPTY"
+        state["qa_history"] = []
+        state["params"] = {}
 
         await state_manager.update_state(user_id, **state)
 

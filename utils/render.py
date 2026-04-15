@@ -3,28 +3,21 @@ from utils.mode_utils import get_mode_title
 from utils.text_utils import shorten_text
 
 
-async def render_result(
-    send_func,   # функция отправки (edit_text или reply_text)
-    state,
-    result
-):
-    """
-    Универсальный рендер результата
-    """
-
+async def render_result(edit_func, state, text):
     title = get_mode_title(state.get("mode"))
 
-    short_text, is_truncated = shorten_text(result)
+    if state.get("result_view") == "full":
+        final_text = text
+        is_truncated = False
+    else:
+        final_text, is_truncated = shorten_text(text)
 
-    text = f"{title}\n\n{short_text}"
+    message = f"{title}\n\n{final_text}"
 
     if is_truncated:
-        text += "\n\n👇 Нажмите, чтобы посмотреть полностью"
+        message += "\n\n👇 Нажмите, чтобы посмотреть полностью"
 
-    await send_func(
-        text,
-        reply_markup=get_result_keyboard(
-            state.get("result_view", "short"),
-            is_truncated
-        )
+    await edit_func(
+        message,
+        reply_markup=get_result_keyboard(state.get("result_view"), is_truncated)
     )

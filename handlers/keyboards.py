@@ -78,7 +78,7 @@ def get_back_keyboard():
 
 def get_analysis_history_keyboard(history):
     keyboard = []
-    visible_history = [x for x in history if x["is_visible"]]
+    visible_history = history
 
     for item in visible_history[-10:]:
         preview = item["result"][:40].replace("\n", " ")

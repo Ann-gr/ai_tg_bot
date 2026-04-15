@@ -15,7 +15,7 @@ You MUST strictly follow the output format.
 Do not change section names.
 Do not translate them.
 Do not add any extra text.
-Do not add any design to section headings.
+Do not add any design to section headings (#, * or other symbols).
 
 STRICT OUTPUT CONTROL:
 - Follow ONLY the requested mode
@@ -25,6 +25,7 @@ STRICT OUTPUT CONTROL:
 - Do NOT duplicate content
 - Do NOT add introductions or conclusions
 - Do NOT explain what you are doing
+- NEVER mix languages
 
 TEXT:
 {text}
@@ -106,7 +107,8 @@ Rules:
         "prompt": """
 Analyze the tone of the text.
 Return the result in the following structure:
-(позитивная / негативная / нейтральная)
+Тон:
+(позитивный / негативный / нейтральный)
 
 Объяснение:
 (1–2 предложения)
