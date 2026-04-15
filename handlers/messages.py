@@ -31,7 +31,7 @@ async def handle_message(update, context):
     )
 
     # Если режим QA и мы ожидаем вопрос
-    if state.get("mode") == "qa" and state.get("ui_state") == "QA":
+    if state.get("mode") == "qa" and state.get("current_text_id"):
         data = await process_user_input(user_id, state, user_question=text)
     else:
         data = await process_user_input(user_id, state, new_text=text)
