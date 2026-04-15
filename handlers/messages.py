@@ -8,9 +8,11 @@ from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
 from services.analysis_flow import process_user_input
+from services.text_repository import save_text
 
 from utils.mode_utils import get_mode_title
 from utils.text_utils import shorten_text
+from utils.render import render_result
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_TEXT_LENGTH = 20000
@@ -28,36 +30,23 @@ async def handle_message(update, context):
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
     )
 
-    data = await process_user_input(user_id, state, text)
+    # Если режим QA и мы ожидаем вопрос
+    if state.get("mode") == "qa" and state.get("ui_state") == "QA":
+        data = await process_user_input(user_id, state, user_question=text)
+    else:
+        data = await process_user_input(user_id, state, new_text=text)
 
     # ошибки
     if data.get("error"):
-        await update.message.reply_text(data["error"])
+        await loading_msg.edit_text(data["error"])
         return
 
     # выбрать режим
     if data.get("action") == "ask_mode":
         state = data["state"]
-
-        if state.get("last_text"):
-            archive_item = {
-                "text_preview": state["last_text"][:200],
-                "qa_history": state.get("qa_history", []),
-                "analysis_history": state.get("analysis_history", [])
-            }
-
-            archive = state.get("archive", [])
-            archive.append(archive_item)
-
-            state["archive"] = archive[-5:]
+        await state_manager.update_state(user_id, **state)
 
         # очищаем текущий текст
-        for item in state.get("qa_history", []):
-            item["visible"] = False
-
-        for item in state.get("analysis_history", []):
-            item["visible"] = False
-            
         state["ui_state"] = "TEXT_LOADED"
 
         await state_manager.update_state(user_id, **state)
@@ -73,18 +62,15 @@ async def handle_message(update, context):
         result = data["result"]
         
         state = data["state"]
-        state["last_result"] = result
         state["ui_state"] = "RESULT"
         state["result_view"] = "short"
 
         await state_manager.update_state(user_id, **state)
 
-        title = get_mode_title(state.get("mode"))
-        short_text, is_truncated = shorten_text(result)
-
-        await loading_msg.edit_text(
-            f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(state["result_view"], is_truncated),
+        await render_result(
+            loading_msg.edit_text,
+            state,
+            result
         )
         return
 
@@ -129,12 +115,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = text[:MAX_TEXT_LENGTH]
 
         # Сохраняем в state
+        text_id = await save_text(user_id, text)
         await state_manager.update_state(
             user_id,
-            last_text=text,
-            question=None,  # сброс QA режима
-            qa_history=[],  # сброс QA истории
-            analysis_history = [] # сброс истории анализов
+            current_text_id=text_id,
+            question=None
         )
 
         await update.message.reply_text(

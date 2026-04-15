@@ -2,13 +2,13 @@ from services.state_db import get_state_db, save_state_db
 import copy
 
 def resolve_ui_state(state):
-        if not state.get("last_text"):
+        if not state.get("current_text_id"):
             return "EMPTY"
 
         if state.get("mode") == "qa" and state.get("question"):
             return "QA"
 
-        if state.get("last_result"):
+        if state.get("last_result_id"):
             return "RESULT"
 
         return "TEXT_LOADED"
@@ -18,11 +18,9 @@ class StateManager:
     DEFAULT_STATE = {
         "mode": "analysis",
         "params": {},
-        "last_text": None,
-        "last_result": None,
+        "current_text_id": None,
+        "last_result_id": None,
         "question": None,
-        "qa_history": [],
-        "analysis_history": [],
         "result_view": "short",
         "ui_state": "EMPTY"
     }

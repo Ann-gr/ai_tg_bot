@@ -11,7 +11,7 @@ async def connect_db():
     if not database_url:
         raise Exception("DATABASE_URL is not set in environment variables")
 
-    pool = await asyncpg.create_pool(database_url)
+    pool = await asyncpg.create_pool(database_url, ssl="require")
 
     print("✅ PostgreSQL connected successfully")
 

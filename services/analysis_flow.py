@@ -1,65 +1,56 @@
 from services.analysis_service import run_analysis
-import uuid
+from services.text_repository import get_text, save_text
+from services.analysis_repository import save_analysis
+from services.qa_repository import save_qa
+from state import state_manager
+async def process_user_input(user_id, state, new_text=None, user_question=None):
+    if user_question and state.get("mode") == "qa":
+        state["question"] = user_question
+    # если пришёл новый текст
+    elif new_text:
+        text_id = await save_text(user_id, new_text)
 
-async def process_user_input(user_id, state, text=None):
-    """
-    Единая точка обработки любого ввода пользователя
-    """
+        state["current_text_id"] = text_id
+        state["question"] = None
 
-    mode = state.get("mode")
-
-    # режим QA
-    if mode == "qa":
-        if text:
-            state["question"] = text
-
-        if not state.get("last_text"):
-            return {"error": "Сначала отправьте текст"}
-
-        result = await run_analysis(user_id, state["last_text"], state)
-
-        qa_history = state.get("qa_history", [])
-
-        qa_history.append({
-            "q": state.get("question"),
-            "a": result,
-            "visible": True
-        })
-        
-        state["qa_history"] = qa_history[-10:]
-
-        return {
-            "action": "show_result",
-            "result": result,
-            "state": state
-        }
-
-    # Если пришёл новый текст (НЕ QA)
-    if text:
-        state["last_text"] = text
-        state["question"] = None  # важно сбрасывать
         return {
             "action": "ask_mode",
             "state": state
         }
 
-    # Обычный анализ
-    if not state.get("last_text"):
+    # если текста нет
+    if not state.get("current_text_id"):
         return {"error": "Сначала отправьте текст"}
 
-    result = await run_analysis(user_id, state["last_text"], state)
+    # достаём текст
+    text = await get_text(state["current_text_id"])
 
-    analysis_history = state.get("analysis_history", [])
-    analysis_history.append({
-        "id": str(uuid.uuid4()),
-        "mode": mode,
-        "result": result,
-        "visible": True
-    })
-    state["analysis_history"] = analysis_history[-10:]
+    analysis_id = None
+
+    # QA режим
+    if state.get("mode") == "qa":
+        result = await run_analysis(user_id, text, state)
+        # сохраняем в историю состояния
+        qa_history = state.get("qa_history", [])
+        qa_history.append({"q": state["question"], "a": result})
+        state["qa_history"] = qa_history[-10:]  # ограничиваем длину
+        await save_qa(user_id, state["current_text_id"], state["question"], result)
+        state["question"] = None  # очищаем
+        await state_manager.update_state(user_id, **state)
+
+    else:
+        result = await run_analysis(user_id, text, state)
+
+        analysis_id = await save_analysis(
+            user_id,
+            state["current_text_id"],
+            state["mode"],
+            result
+        )
 
     return {
         "action": "show_result",
         "result": result,
+        "result_id": analysis_id,
         "state": state
     }

@@ -13,11 +13,14 @@ from handlers.keyboards import (
     get_history_menu
 )
 from services.analysis_flow import process_user_input
+from services.analysis_repository import get_user_analysis, hide_all_analysis, get_analysis_by_id
+from services.qa_repository import hide_all_qa
 from state import state_manager
 from state.state_manager import resolve_ui_state
 from utils.text_utils import shorten_text
 from utils.mode_utils import get_mode_title
 from utils.params import build_params
+from utils.render import render_result
 
 def parse_callback(data: str):
     """
@@ -129,9 +132,6 @@ async def handle_action(query, context, user_id, state, payload):
         await run_and_show_result(query, user_id, state)
 
     elif action == "new_text":
-        state["last_text"] = None
-        state["last_result"] = None
-
         await state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
@@ -140,7 +140,6 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "change_mode":
-        state["last_result"] = None
         await state_manager.update_state(user_id, **state)
 
         await query.edit_message_text(
@@ -161,8 +160,7 @@ async def handle_action(query, context, user_id, state, payload):
 
     elif action == "analysis_history":
         history = [
-            x for x in state.get("analysis_history", [])
-            if x.get("visible", True)
+            x for x in state.get("analysis_history", [])           
         ]
 
         if not history:
@@ -180,7 +178,6 @@ async def handle_action(query, context, user_id, state, payload):
     elif action == "qa_history":
         history = [
             x for x in state.get("qa_history", [])
-            if x.get("visible", True)
         ]
 
         if not history:
@@ -201,13 +198,8 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "clear_all":
-        for item in state.get("qa_history", []):
-            item["visible"] = False
-
-        for item in state.get("analysis_history", []):
-            item["visible"] = False
-
-        await state_manager.update_state(user_id, **state)
+        await hide_all_analysis(user_id)
+        await hide_all_qa(user_id)
 
         await query.edit_message_text(
             "🧹 История очищена",
@@ -228,9 +220,13 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "full_result":
-        full_text = state.get("last_result")
+        full_text = None
+
+        if state.get("last_result_id"):
+            full_text = await get_analysis_by_id(state.get("last_result_id"))
 
         if not full_text:
+            full_text = state.get("last_result")
             await query.edit_message_text(
                 "❌ Нет результата",
                 reply_markup=get_back_keyboard()
@@ -252,7 +248,7 @@ async def handle_action(query, context, user_id, state, payload):
 async def handle_analysis_item(query, context, user_id, state, payload):
     item_id = payload[0]
 
-    history = state.get("analysis_history", [])
+    history = await get_user_analysis(user_id)
 
     item = next((x for x in history if x["id"] == item_id), None)
 
@@ -313,27 +309,18 @@ async def run_and_show_result(query, user_id, state):
     result = data["result"]
 
     state = data["state"]
-    state["last_result"] = result
     state["question"] = None
     state["ui_state"] = "RESULT"
     state["result_view"] = "short"
+    state["last_result"] = result
+    state["last_result_id"] = data.get("result_id")
 
     await state_manager.update_state(user_id, **state)
 
-    title = get_mode_title(state.get("mode"))
-    short_text, is_truncated = shorten_text(result)
-
-    formatted_text = (
-        f"{title}\n\n"
-        f"{short_text}\n\n"
-    )
-
-    if is_truncated:
-        formatted_text += "👇 Нажмите, чтобы посмотреть полностью"
-
-    await query.edit_message_text(
-        formatted_text,
-        reply_markup=get_result_keyboard(state["result_view"], is_truncated),
+    await render_result(
+        query.edit_message_text,
+        state,
+        result
     )
 
 ACTION_MAP = {
