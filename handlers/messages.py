@@ -9,8 +9,10 @@ from state import state_manager
 from services.file_service import extract_text_from_file, FileProcessingError
 from services.analysis_flow import process_user_input
 from services.text_repository import save_text
+from services.chunk_repository import save_chunks
 
 from utils.render import render_result
+from utils.text_splitter import split_text
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_TEXT_LENGTH = 8000
@@ -21,6 +23,10 @@ SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
 async def handle_message(update, context):
     user_id = update.effective_user.id
     text = update.message.text
+    text_id = state["current_text_id"]
+
+    chunks = split_text(text)
+    await save_chunks(text_id, chunks)
 
     state = await state_manager.get_state(user_id)
 
@@ -123,6 +129,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             current_text_id=text_id,
             question=None
         )
+
+        chunks = split_text(text)
+        await save_chunks(text_id, chunks)
 
         await update.message.reply_text(
             "✅ Файл успешно загружен\n\nВыберите режим анализа:",

@@ -14,9 +14,9 @@ def create_prompt(text, mode="analysis", **kwargs):
             short_q = item["q"][:100]
             short_a = item["a"][:200]
 
-            short_history += f"\nQ: {short_q}\nA: {short_a}\n"
+            short_history += f"\nВопрос: {short_q}\nОтвет: {short_a}\n"
 
         if short_history:
-            base_prompt += f"\n\nPREVIOUS QA:\n{short_history}"
+            base_prompt += f"\n\nИстория диалога:\n{short_history}"
 
     return base_prompt + "\n" + mode_prompt
