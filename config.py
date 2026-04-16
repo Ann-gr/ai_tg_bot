@@ -3,4 +3,4 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "deepseek/deepseek-chat-v3-0324"
+MODEL = "deepseek/deepseek-r1"
