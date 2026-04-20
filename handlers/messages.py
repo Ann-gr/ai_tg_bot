@@ -21,8 +21,8 @@ SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
 
 # ОБРАБОТКА ТЕКСТА
 async def handle_message(update, context):
-    state = await state_manager.get_state(user_id)
     user_id = update.effective_user.id
+    state = await state_manager.get_state(user_id)
     text = update.message.text
     text_id = state["current_text_id"]
 
