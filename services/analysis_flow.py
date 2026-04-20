@@ -2,13 +2,14 @@ from services.analysis_service import run_analysis
 from services.text_repository import get_text, save_text
 from services.analysis_repository import save_analysis
 from services.qa_repository import save_qa
-from services.chunk_repository import get_chunks
+from services.chunk_repository import get_chunks, save_chunks
 from state import state_manager
-from utils.relevance import get_relevant_chunks, get_top_chunks
+from utils.relevance import get_top_chunks
+from utils.text_splitter import split_text
 
 async def handle_qa(user_id, state, question):
     if not state.get("current_text_id"):
-        return {"error": "Сначала отправьте текст"}
+        return {"error": "❌ Сначала загрузите текст (отправьте файл или текст)"}
 
     text_id = state["current_text_id"]
 
@@ -23,20 +24,20 @@ async def handle_qa(user_id, state, question):
     else:
         context_text = top_chunks
 
+    MAX_CONTEXT = 1000
     context = "\n\n".join(context_text)
 
-    # короткая история
-    history = state.get("qa_history", [])[-2:]
+    if len(context) > MAX_CONTEXT:
+        context = context[:MAX_CONTEXT]
 
     result = await run_analysis(
         user_id,
         context,
         state,
-        user_question=question,
-        qa_history=history
+        user_question=question
     )
 
-    # охраняем
+    # cохраняем
     qa_history = state.get("qa_history", [])
     qa_history.append({
         "question": question,
@@ -66,6 +67,8 @@ async def process_user_input(user_id, state, new_text=None, user_question=None):
         text_id = await save_text(user_id, new_text)
 
         state["current_text_id"] = text_id
+        chunks = split_text(new_text)
+        await save_chunks(text_id, chunks)
 
         return {
             "action": "ask_mode",
@@ -74,7 +77,7 @@ async def process_user_input(user_id, state, new_text=None, user_question=None):
 
     # если текста нет
     if not state.get("current_text_id"):
-        return {"error": "❌ Сначала отправьте текст"}
+        return {"error": "❌ Сначала загрузите текст (отправьте файл или текст)"}
 
     # достаём текст
     text = await get_text(state["current_text_id"])

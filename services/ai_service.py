@@ -11,7 +11,7 @@ async def analyze_with_ai(messages):
     payload = {
         "model": MODEL,
         "messages": messages,
-        "max_tokens": 300
+        "max_tokens": 100
     }
 
     try:
@@ -19,6 +19,9 @@ async def analyze_with_ai(messages):
             response = await client.post(API_URL, headers=headers, json=payload)
             logger = logging.getLogger(__name__)
             logger.info(f"AI status: {response.status_code}") # логирование
+
+        if response.status_code == 402:
+            return "⚠️ Лимит AI временно исчерпан. Попробуйте позже."
 
         if response.status_code != 200:
             return f"Ошибка {response.status_code}: {response.text}"

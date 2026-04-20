@@ -24,11 +24,6 @@ async def handle_message(update, context):
     user_id = update.effective_user.id
     state = await state_manager.get_state(user_id)
     text = update.message.text
-    text_id = state["current_text_id"]
-
-    chunks = split_text(text)
-    await save_chunks(text_id, chunks)
-
 
     loading_msg = await update.message.reply_text(
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
@@ -37,7 +32,7 @@ async def handle_message(update, context):
     # Если режим QA и мы ожидаем вопрос
     if state.get("mode") == "qa":
         if not state.get("current_text_id"):
-            await loading_msg.edit_text("❌ Сначала загрузите текст")
+            await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
             return
         
         data = await process_user_input(user_id, state, user_question=text)
@@ -59,7 +54,7 @@ async def handle_message(update, context):
 
         await state_manager.update_state(user_id, **state)
 
-        await update.message.reply_text(
+        await loading_msg.edit_text(
             "✅ Текст загружен\n\nВыберите режим анализа:",
             reply_markup=get_modes_keyboard(),
         )
