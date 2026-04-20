@@ -1,22 +1,82 @@
-from core.modes import MODE_REGISTRY, BASE_PROMPT
-def create_prompt(text, mode="analysis", **kwargs):
+from core.modes import MODE_REGISTRY
+
+SYSTEM_PROMPT = """
+You are a professional text analysis assistant.
+
+Rules:
+- Always respond in Russian
+- Follow the required structure strictly
+- Do not use markdown
+- Do not add extra explanations
+- Be concise and precise
+"""
+MAX_TEXT_LENGTH = 1000
+MAX_HISTORY_ITEMS = 1
+MAX_Q_LEN = 100
+MAX_A_LEN = 200
+
+def trim_text(text: str) -> str:
+    if len(text) <= MAX_TEXT_LENGTH:
+        return text
+    return text[:MAX_TEXT_LENGTH]
+
+def build_qa_history(history: list) -> str:
+    """
+    Сильно сжатая история QA (чтобы не убивать токены)
+    """
+    if not history:
+        return ""
+
+    short_history = ""
+
+    for item in history[-MAX_HISTORY_ITEMS:]:
+        q = item.get("Вопрос", "")[:MAX_Q_LEN]
+        a = item.get("Ответ", "")[:MAX_A_LEN]
+
+        short_history += f"\nВопрос: {q}\nОтвет: {a}\n"
+
+    return short_history
+
+
+def create_prompt(text: str, mode: str = "analysis", **kwargs) -> str:
+    """
+    Компактная сборка prompt без раздувания токенов
+    """
+
     config = MODE_REGISTRY.get(mode, MODE_REGISTRY["analysis"])
+    mode_prompt = config["prompt"]
 
-    base_prompt = BASE_PROMPT.format(text=text)
-    mode_prompt = config["prompt"].format(**kwargs)
+    # параметры
+    top_n = kwargs.get("top_n", 10)
+    question = kwargs.get("question")
+    qa_history = kwargs.get("qa_history", [])
 
-    # QA history (ограниченная)
+    # форматируем mode prompt
+    try:
+        mode_prompt = mode_prompt.format(
+            top_n=top_n,
+            question=question or ""
+        )
+    except KeyError:
+        pass  # если режим без параметров
+
+    # --- QA режим ---
     if mode == "qa":
-        history = kwargs.get("qa_history", [])
+        history_block = build_qa_history(qa_history)
 
-        short_history = ""
-        for item in history[-3:]:
-            short_q = item["q"][:100]
-            short_a = item["a"][:200]
+        return f"""
+Context:
+{trim_text(text)}
 
-            short_history += f"\nВопрос: {short_q}\nОтвет: {short_a}\n"
+{history_block}
 
-        if short_history:
-            base_prompt += f"\n\nИстория диалога:\n{short_history}"
+{mode_prompt}
+"""
 
-    return base_prompt + "\n" + mode_prompt
+    # --- обычные режимы ---
+    return f"""
+Text:
+{trim_text(text)}
+
+{mode_prompt}
+"""

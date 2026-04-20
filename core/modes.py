@@ -1,32 +1,3 @@
-BASE_PROMPT = """
-You are a senior text analysis assistant.
-Your task is to analyze the given text and return a clear and structured response.
-
-CRITICAL RULES:
-- Always respond in Russian
-- Do NOT use JSON
-- Do NOT add explanations outside the required structure
-- Be concise and structured
-- Follow the output format strictly
-- Do not add sections outside the format
-- Do not use markdown formatting (no #, *, **)
-- Keep formatting plain text only
-- Follow ONLY the requested mode
-- Do NOT include sections from other modes
-- Do NOT add extra sections
-- Do NOT repeat sections
-- Do NOT duplicate content
-- Do NOT add introductions or conclusions
-- Do NOT explain what you are doing
-- NEVER mix languages
-
-FINAL RULE:
-The answer must be clean plain text without markdown or decorations.
-
-TEXT:
-{text}
-"""
-
 MODE_REGISTRY = {
     "analysis": {
         "label": "📊 Общий анализ",
