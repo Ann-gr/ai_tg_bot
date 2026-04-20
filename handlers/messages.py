@@ -21,6 +21,7 @@ SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
 
 # ОБРАБОТКА ТЕКСТА
 async def handle_message(update, context):
+    state = await state_manager.get_state(user_id)
     user_id = update.effective_user.id
     text = update.message.text
     text_id = state["current_text_id"]
@@ -28,7 +29,6 @@ async def handle_message(update, context):
     chunks = split_text(text)
     await save_chunks(text_id, chunks)
 
-    state = await state_manager.get_state(user_id)
 
     loading_msg = await update.message.reply_text(
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
