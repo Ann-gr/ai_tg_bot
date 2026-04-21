@@ -1,5 +1,5 @@
 import os
-
+import time
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -7,7 +7,9 @@ from handlers.keyboards import get_modes_keyboard
 from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
-from services.analysis_flow import process_user_input
+from services.analysis_flow import prepare_analysis_data
+from services.analysis_service import run_analysis_stream
+from services.analysis_repository import save_analysis
 from services.text_repository import save_text
 from services.chunk_repository import save_chunks
 
@@ -18,6 +20,9 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_TEXT_LENGTH = 8000
 
 SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
+
+UPDATE_INTERVAL = 0.4  # сек
+MIN_CHARS = 40
 
 # ОБРАБОТКА ТЕКСТА
 async def handle_message(update, context):
@@ -34,11 +39,19 @@ async def handle_message(update, context):
         if not state.get("current_text_id"):
             await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
             return
-        
-        data = await process_user_input(user_id, state, user_question=text)
+    
+        data = await prepare_analysis_data(
+            user_id,
+            state,
+            user_question=text if state.get("mode") == "qa" else None
+        )
     else:
-        data = await process_user_input(user_id, state, new_text=text)
-
+        data = await prepare_analysis_data(
+            user_id,
+            state,
+            new_text=text if state.get("mode") != "qa" else None
+        )
+        
     # ошибки
     if data.get("error"):
         await loading_msg.edit_text(data["error"])
@@ -46,36 +59,59 @@ async def handle_message(update, context):
 
     # выбрать режим
     if data.get("action") == "ask_mode":
-        state = data["state"]
-        await state_manager.update_state(user_id, **state)
-
-        # очищаем текущий текст
         state["ui_state"] = "TEXT_LOADED"
-
         await state_manager.update_state(user_id, **state)
 
         await loading_msg.edit_text(
-            "✅ Текст загружен\n\nВыберите режим анализа:",
+            "✅ Текст загружен\n\nВыберите режим:",
             reply_markup=get_modes_keyboard(),
         )
         return
 
-    # показать результат
-    if data.get("action") == "show_result":
-        result = data["result"]
-        
-        state = data["state"]
-        state["ui_state"] = "RESULT"
-        state["result_view"] = "short"
+    # STREAMING
+    buffer = ""
+    full_text = ""
+    last_update = time.time()
 
-        await state_manager.update_state(user_id, **state)
+    async for chunk in run_analysis_stream(
+        text=data.get("text"),
+        state=state,
+        user_question=data.get("question"),
+    ):
+        buffer += chunk
+        full_text += chunk
 
-        await render_result(
-            loading_msg.edit_text,
-            state,
-            result
-        )
-        return
+        now = time.time()
+
+        if len(buffer) >= MIN_CHARS or (now - last_update) > UPDATE_INTERVAL:
+            try:
+                await loading_msg.edit_text(full_text + "▌")
+            except Exception:
+                pass
+
+            buffer = ""
+            last_update = now
+
+    state["result_view"] = "short"
+    state["ui_state"] = "RESULT"
+    
+    await render_result(
+        loading_msg.edit_text,
+        state,
+        full_text
+    )
+
+    analysis_id = await save_analysis(
+        user_id,
+        state.get("current_text_id"),
+        state.get("mode"),
+        full_text
+    )
+    # финал
+    state["last_result"] = full_text
+    state["last_result_id"] = analysis_id
+
+    await state_manager.update_state(user_id, **state)
 
 # ОБРАБОТКА ФАЙЛОВ
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -107,11 +143,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔍 Извлекаю текст из файла...")
 
     try:
-        # Определяем тип
-        file_type = file_name.split(".")[-1]
-
-        # Извлекаем текст
-        text = extract_text_from_file(file_path, file_type)
+        # Определяем тип и извлекаем текст
+        text = extract_text_from_file(file_path, file_name.split(".")[-1])
 
         # Ограничение текста
         if len(text) > MAX_TEXT_LENGTH:
@@ -121,8 +154,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text_id = await save_text(user_id, text)
         await state_manager.update_state(
             user_id,
-            current_text_id=text_id,
-            question=None
+            current_text_id=text_id
         )
 
         chunks = split_text(text)

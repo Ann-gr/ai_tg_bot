@@ -1,13 +1,9 @@
-from services.analysis_service import run_analysis
 from services.text_repository import get_text, save_text
-from services.analysis_repository import save_analysis
-from services.qa_repository import save_qa
 from services.chunk_repository import get_chunks, save_chunks
-from state import state_manager
 from utils.relevance import get_top_chunks
 from utils.text_splitter import split_text
 
-async def handle_qa(user_id, state, question):
+async def prepare_qa_context(state, question):
     if not state.get("current_text_id"):
         return {"error": "❌ Сначала загрузите текст (отправьте файл или текст)"}
 
@@ -15,65 +11,36 @@ async def handle_qa(user_id, state, question):
 
     # получаем чанки
     chunks = await get_chunks(text_id)
-
     # находим релевантные
     top_chunks = get_top_chunks(chunks, question)
 
-    if not top_chunks:
-        context_text = chunks[:2]  # fallback
-    else:
-        context_text = top_chunks
+    context_chunks = top_chunks if top_chunks else chunks[:2]
 
-    MAX_CONTEXT = 1000
-    context = "\n\n".join(context_text)
-
-    if len(context) > MAX_CONTEXT:
-        context = context[:MAX_CONTEXT]
-
-    result = await run_analysis(
-        user_id,
-        context,
-        state,
-        user_question=question
-    )
-
-    # cохраняем
-    qa_history = state.get("qa_history", [])
-    qa_history.append({
-        "question": question,
-        "answer": result
-    })
-
-    state["qa_history"] = qa_history[-5:]
-
-    await save_qa(user_id, text_id, question, result)
-    await state_manager.update_state(user_id, **state)
+    context = "\n\n".join(context_chunks)[:1000]
 
     return {
-        "action": "show_result",
-        "result": result,
-        "state": state
+        "action": "ready_to_stream",
+        "text": context,
+        "question": question,
     }
 
-async def process_user_input(user_id, state, new_text=None, user_question=None):
+async def prepare_analysis_data(user_id, state, new_text=None, user_question=None):
     if state.get("mode") == "qa":
         if not user_question:
             return {"error": "❓ Введите вопрос"}
 
-        return await handle_qa(user_id, state, user_question)
+        return await prepare_qa_context(state, user_question)
     
     # если пришёл новый текст
     elif new_text:
         text_id = await save_text(user_id, new_text)
 
         state["current_text_id"] = text_id
+
         chunks = split_text(new_text)
         await save_chunks(text_id, chunks)
 
-        return {
-            "action": "ask_mode",
-            "state": state
-        }
+        return {"action": "ask_mode"}
 
     # если текста нет
     if not state.get("current_text_id"):
@@ -81,19 +48,8 @@ async def process_user_input(user_id, state, new_text=None, user_question=None):
 
     # достаём текст
     text = await get_text(state["current_text_id"])
-    
-    result = await run_analysis(user_id, text, state)
-
-    analysis_id = await save_analysis(
-        user_id,
-        state["current_text_id"],
-        state["mode"],
-        result
-    )
 
     return {
-        "action": "show_result",
-        "result": result,
-        "result_id": analysis_id,
-        "state": state
+        "action": "ready_to_stream",
+        "text": text
     }

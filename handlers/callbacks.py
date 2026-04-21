@@ -12,7 +12,6 @@ from handlers.keyboards import (
     get_qa_keyboard,
     get_history_menu
 )
-from services.analysis_flow import process_user_input
 from services.analysis_repository import get_user_analysis, hide_all_analysis, get_analysis_by_id, get_analysis_by_id_for_user
 from services.qa_repository import get_user_qa, hide_all_qa
 from state import state_manager
@@ -113,7 +112,7 @@ async def handle_mode(query, context, user_id, state, payload):
         )
         return
 
-    await run_and_show_result(query, user_id, state)
+    await query.edit_message_text("✍️ Отправьте сообщение для анализа")
 
 async def handle_param(query, context, user_id, state, payload):
     mode, value = payload
@@ -123,13 +122,13 @@ async def handle_param(query, context, user_id, state, payload):
 
     await state_manager.update_state(user_id, **state)
 
-    await run_and_show_result(query, user_id, state)
+    await query.edit_message_text("✍️ Отправьте сообщение для анализа")
 
 async def handle_action(query, context, user_id, state, payload):
     action = payload[0]
 
     if action == "repeat":
-        await run_and_show_result(query, user_id, state)
+        await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
 
     elif action == "new_text":
         await state_manager.update_state(user_id, **state)
@@ -198,7 +197,7 @@ async def handle_action(query, context, user_id, state, payload):
         await hide_all_qa(user_id)
 
         state["current_text_id"] = None
-        state["last_result_id"] = None
+        state["last_result"] = None
         state["mode"] = "analysis"
         state["ui_state"] = "EMPTY"
         state["qa_history"] = []
@@ -212,7 +211,10 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "short_result":
-        full_text = await get_analysis_by_id(state.get("last_result_id"))
+        full_text = state.get("last_result")
+
+        if not full_text and state.get("last_result_id"):
+            full_text = await get_analysis_by_id(state.get("last_result_id"))
 
         if not full_text:
             await query.edit_message_text(
@@ -247,6 +249,7 @@ async def handle_action(query, context, user_id, state, payload):
             return
         
         state["result_view"] = "full"
+
         await state_manager.update_state(user_id, **state)
 
         await render_result(
@@ -300,35 +303,6 @@ async def show_menu(query, state):
             "❓ Задайте вопрос:",
             reply_markup=get_qa_keyboard()
         )
-
-async def run_and_show_result(query, user_id, state):
-    await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
-
-    data = await process_user_input(user_id, state)
-
-    if data.get("error"):
-        await query.edit_message_text(data["error"])
-        return
-    
-    if data.get("action") != "show_result":
-        await query.edit_message_text("❌ Не удалось выполнить анализ")
-        return
-
-    result = data["result"]
-
-    state = data["state"]
-    state["ui_state"] = "RESULT"
-    state["result_view"] = "short"
-    state["last_result"] = result
-    state["last_result_id"] = data.get("result_id")
-
-    await state_manager.update_state(user_id, **state)
-
-    await render_result(
-        query.edit_message_text,
-        state,
-        result
-    )
 
 ACTION_MAP = {
     "go": handle_go,

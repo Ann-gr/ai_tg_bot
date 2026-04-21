@@ -8,7 +8,7 @@ def resolve_ui_state(state):
         if state.get("mode") == "qa" and state.get("question"):
             return "QA"
 
-        if state.get("last_result_id"):
+        if state.get("last_result"):
             return "RESULT"
 
         return "TEXT_LOADED"
@@ -19,8 +19,8 @@ class StateManager:
         "mode": "analysis",
         "params": {},
         "current_text_id": None,
+        "last_result": None,
         "last_result_id": None,
-        "question": None,
         "result_view": "short",
         "ui_state": "EMPTY"
     }

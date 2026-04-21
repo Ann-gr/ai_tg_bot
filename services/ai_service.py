@@ -1,8 +1,8 @@
 import httpx
-import logging
+import json
 from config import API_URL, OPENROUTER_API_KEY, MODEL
 
-async def analyze_with_ai(messages):
+async def stream_ai_response(messages):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
@@ -11,37 +11,36 @@ async def analyze_with_ai(messages):
     payload = {
         "model": MODEL,
         "messages": messages,
-        "max_tokens": 100
+        "max_tokens": 100,
+        "stream": True
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.post(API_URL, headers=headers, json=payload)
-            logger = logging.getLogger(__name__)
-            logger.info(f"AI status: {response.status_code}") # логирование
+    async with httpx.AsyncClient(timeout=None) as client:
+        async with client.stream("POST", API_URL, headers=headers, json=payload) as response:
 
-        if response.status_code == 402:
-            return "⚠️ Лимит AI временно исчерпан. Попробуйте позже."
+            if response.status_code == 402:
+                yield "⚠️ Лимит AI временно исчерпан. Попробуйте позже."
+                return
 
-        if response.status_code != 200:
-            return f"Ошибка {response.status_code}: {response.text}"
+            if response.status_code != 200:
+                yield f"❌ Ошибка {response.status_code}: {response.text}"
+                return
 
-        try:
-            data = response.json()
-        except Exception:
-            return "Ошибка: некорректный ответ от AI"
+            async for line in response.aiter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
 
-        if "choices" not in data or not data["choices"]:
-            return "Ошибка: пустой ответ от AI"
+                data_str = line.replace("data: ", "")
 
-        try:
-            return data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError):
-            return "Ошибка: неправильный формат ответа AI"
+                if data_str == "[DONE]":
+                    break
 
-    except httpx.TimeoutException:
-        return "⏳ AI долго отвечает, попробуйте позже"
+                try:
+                    data = json.loads(data_str)
+                    delta = data["choices"][0]["delta"].get("content")
 
-    except httpx.RequestError as e:
-        print("Request error:", e)
-        return "Ошибка подключения к AI"
+                    if delta:
+                        yield delta
+
+                except Exception:
+                    continue
