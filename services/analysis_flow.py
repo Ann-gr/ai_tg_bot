@@ -1,4 +1,4 @@
-from services.text_repository import get_text, save_text, save_chunks
+from services.text_repository import get_text, save_text, save_chunks, get_chunks
 from services.streaming_service import stream_and_render
 from utils.relevance import get_top_chunks
 from utils.text_splitter import split_text
