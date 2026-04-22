@@ -28,6 +28,9 @@ async def handle_message(update, context):
     state = await state_manager.get_state(user_id)
     text = update.message.text
 
+    if update.message.photo:
+        await update.message.reply_text("📷 Пожалуйста, отправьте файл (PDF, DOCX, TXT), а не фото")
+
     loading_msg = await update.message.reply_text(
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
     )
@@ -147,3 +150,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Очистка
         if os.path.exists(file_path):
             os.remove(file_path)
+
+async def handle_unsupported(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "❌ Поддерживаются только файлы: PDF, DOCX, TXT"
+    )

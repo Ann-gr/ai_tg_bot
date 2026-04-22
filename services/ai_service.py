@@ -11,7 +11,7 @@ async def stream_ai_response(messages):
     payload = {
         "model": MODEL,
         "messages": messages,
-        "max_tokens": 100,
+        "max_tokens": 1200,
         "stream": True
     }
 

@@ -6,7 +6,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 
 from config import TOKEN
 from handlers.commands import start
-from handlers.messages import handle_message, handle_document
+from handlers.messages import handle_message, handle_document, handle_unsupported
 from handlers.callbacks import handle_callback
 
 from services.db import connect_db
@@ -21,6 +21,7 @@ tg_app = ApplicationBuilder().token(TOKEN).build()
 tg_app.add_handler(CommandHandler("start", start))
 tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)) # указываем, что нужно обрабатывать текст, но не команды
 tg_app.add_handler(MessageHandler(filters.Document.ALL, handle_document)) # добавляем загрузку документов
+tg_app.add_handler(MessageHandler(~filters.TEXT, handle_unsupported)) # добавляем обработку неподдерживаемых типов файлов
 tg_app.add_handler(CallbackQueryHandler(handle_callback)) # добавляем обработку callback-запросов
 # создаём event loop вручную
 loop = asyncio.new_event_loop()
