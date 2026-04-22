@@ -1,5 +1,5 @@
 import os
-import time
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -8,12 +8,10 @@ from state import state_manager
 
 from services.file_service import extract_text_from_file, FileProcessingError
 from services.analysis_flow import prepare_analysis_data
-from services.analysis_service import run_analysis_stream
-from services.analysis_repository import save_analysis
-from services.text_repository import save_text
-from services.chunk_repository import save_chunks
+from services.history_repository import save_analysis
+from services.text_repository import save_text, save_chunks
+from services.streaming_service import stream_and_render
 
-from utils.render import render_result
 from utils.text_splitter import split_text
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -43,13 +41,13 @@ async def handle_message(update, context):
         data = await prepare_analysis_data(
             user_id,
             state,
-            user_question=text if state.get("mode") == "qa" else None
+            user_question=text
         )
     else:
         data = await prepare_analysis_data(
             user_id,
             state,
-            new_text=text if state.get("mode") != "qa" else None
+            new_text=None
         )
         
     # ошибки
@@ -69,36 +67,12 @@ async def handle_message(update, context):
         return
 
     # STREAMING
-    buffer = ""
-    full_text = ""
-    last_update = time.time()
-
-    async for chunk in run_analysis_stream(
-        text=data.get("text"),
+    full_text = await stream_and_render(
+        edit_func=loading_msg.edit_text,
+        user_id=user_id,
         state=state,
-        user_question=data.get("question"),
-    ):
-        buffer += chunk
-        full_text += chunk
-
-        now = time.time()
-
-        if len(buffer) >= MIN_CHARS or (now - last_update) > UPDATE_INTERVAL:
-            try:
-                await loading_msg.edit_text(full_text + "▌")
-            except Exception:
-                pass
-
-            buffer = ""
-            last_update = now
-
-    state["result_view"] = "short"
-    state["ui_state"] = "RESULT"
-    
-    await render_result(
-        loading_msg.edit_text,
-        state,
-        full_text
+        text=data.get("text"),
+        question=data.get("question"),
     )
 
     analysis_id = await save_analysis(
@@ -107,10 +81,8 @@ async def handle_message(update, context):
         state.get("mode"),
         full_text
     )
-    # финал
-    state["last_result"] = full_text
-    state["last_result_id"] = analysis_id
 
+    state["last_result_id"] = analysis_id
     await state_manager.update_state(user_id, **state)
 
 # ОБРАБОТКА ФАЙЛОВ

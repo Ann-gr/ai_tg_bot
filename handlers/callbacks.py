@@ -12,8 +12,8 @@ from handlers.keyboards import (
     get_qa_keyboard,
     get_history_menu
 )
-from services.analysis_repository import get_user_analysis, hide_all_analysis, get_analysis_by_id, get_analysis_by_id_for_user
-from services.qa_repository import get_user_qa, hide_all_qa
+from services.history_repository import get_user_analysis, hide_all_analysis, get_analysis_by_id, get_analysis_by_id_for_user, get_user_qa, hide_all_qa
+from services.analysis_flow import run_analysis_pipeline
 from state import state_manager
 from state.state_manager import resolve_ui_state
 from utils.text_utils import shorten_text
@@ -112,7 +112,13 @@ async def handle_mode(query, context, user_id, state, payload):
         )
         return
 
-    await query.edit_message_text("✍️ Отправьте сообщение для анализа")
+    await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
+
+    await run_analysis_pipeline(
+        edit_func=query.edit_message_text,
+        user_id=user_id,
+        state=state
+    )
 
 async def handle_param(query, context, user_id, state, payload):
     mode, value = payload
@@ -122,13 +128,25 @@ async def handle_param(query, context, user_id, state, payload):
 
     await state_manager.update_state(user_id, **state)
 
-    await query.edit_message_text("✍️ Отправьте сообщение для анализа")
+    await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
+
+    await run_analysis_pipeline(
+        edit_func=query.edit_message_text,
+        user_id=user_id,
+        state=state
+    )
 
 async def handle_action(query, context, user_id, state, payload):
     action = payload[0]
 
     if action == "repeat":
         await query.edit_message_text("⏳ Анализирую...\n\nЭто может занять несколько секунд")
+
+        await run_analysis_pipeline(
+            edit_func=query.edit_message_text,
+            user_id=user_id,
+            state=state
+        )
 
     elif action == "new_text":
         await state_manager.update_state(user_id, **state)
@@ -198,6 +216,7 @@ async def handle_action(query, context, user_id, state, payload):
 
         state["current_text_id"] = None
         state["last_result"] = None
+        state["last_result_id"] = None
         state["mode"] = "analysis"
         state["ui_state"] = "EMPTY"
         state["qa_history"] = []

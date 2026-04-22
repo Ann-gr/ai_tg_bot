@@ -1,5 +1,5 @@
-from services.text_repository import get_text, save_text
-from services.chunk_repository import get_chunks, save_chunks
+from services.text_repository import get_text, save_text, save_chunks
+from services.streaming_service import stream_and_render
 from utils.relevance import get_top_chunks
 from utils.text_splitter import split_text
 
@@ -53,3 +53,24 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
         "action": "ready_to_stream",
         "text": text
     }
+
+async def run_analysis_pipeline(
+    edit_func,
+    user_id,
+    state,
+):
+    data = await prepare_analysis_data(user_id, state)
+
+    if data.get("error"):
+        await edit_func(data["error"])
+        return None
+
+    result = await stream_and_render(
+        edit_func=edit_func,
+        user_id=user_id,
+        state=state,
+        text=data.get("text"),
+        question=data.get("question"),
+    )
+
+    return result
