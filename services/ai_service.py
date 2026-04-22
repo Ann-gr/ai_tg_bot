@@ -11,7 +11,7 @@ async def stream_ai_response(messages):
     payload = {
         "model": MODEL,
         "messages": messages,
-        "max_tokens": 800,
+        "max_tokens": 200,
         "stream": True
     }
 
@@ -19,8 +19,8 @@ async def stream_ai_response(messages):
         async with client.stream("POST", API_URL, headers=headers, json=payload) as response:
 
             if response.status_code == 402:
-                async with httpx.AsyncClient(timeout=15) as client:
-                    response = await client.post(API_URL, headers=headers, json=payload)
+                yield "⚠️ Лимит AI временно исчерпан. Попробуйте позже."
+                return
 
             if response.status_code != 200:
                 yield f"❌ Ошибка {response.status_code}: {response.text}"
