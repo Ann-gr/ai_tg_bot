@@ -19,7 +19,7 @@ async def stream_ai_response(messages):
         async with client.stream("POST", API_URL, headers=headers, json=payload) as response:
 
             if response.status_code == 402:
-                yield "⚠️ Лимит AI временно исчерпан. Попробуйте позже." f"❌ Ошибка {response.status_code}: {response.text}"
+                yield f"❌ Ошибка {response.status_code}: {response.text}"
                 return
 
             if response.status_code != 200:
