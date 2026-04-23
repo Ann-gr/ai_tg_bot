@@ -15,7 +15,7 @@ from services.streaming_service import stream_and_render
 from utils.text_splitter import split_text
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-MAX_TEXT_LENGTH = 8000
+MAX_TEXT_LENGTH = 4000
 
 SUPPORTED_FORMATS = (".txt", ".pdf", ".docx")
 

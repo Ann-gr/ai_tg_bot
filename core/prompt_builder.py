@@ -1,15 +1,6 @@
 from core.modes import MODE_REGISTRY
 
-SYSTEM_PROMPT = """
-You are a professional text analysis assistant.
-
-Rules:
-- Always respond in Russian
-- Follow the required structure strictly
-- Do not use markdown
-- Do not add extra explanations
-- Be concise and precise
-"""
+SYSTEM_PROMPT = "You are a professional text analysis assistant. Answer clearly and structured."
 MAX_TEXT_LENGTH = 1000
 MAX_HISTORY_ITEMS = 1
 MAX_Q_LEN = 100
@@ -21,9 +12,6 @@ def trim_text(text: str) -> str:
     return text[:MAX_TEXT_LENGTH]
 
 def build_qa_history(history: list) -> str:
-    """
-    Сильно сжатая история QA (чтобы не убивать токены)
-    """
     if not history:
         return ""
 
@@ -39,10 +27,6 @@ def build_qa_history(history: list) -> str:
 
 
 def create_prompt(text: str, mode: str = "analysis", **kwargs) -> str:
-    """
-    Компактная сборка prompt без раздувания токенов
-    """
-
     config = MODE_REGISTRY.get(mode, MODE_REGISTRY["analysis"])
     mode_prompt = config["prompt"]
 
