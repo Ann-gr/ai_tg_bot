@@ -36,7 +36,7 @@ async def handle_message(update, context):
     )
 
     # Если режим QA и мы ожидаем вопрос
-    if state.get("mode") == "qa":
+    if state.get("ui_state") == "QA":
         if not state.get("current_text_id"):
             await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
             return
@@ -50,8 +50,11 @@ async def handle_message(update, context):
         data = await prepare_analysis_data(
             user_id,
             state,
-            new_text=None
+            new_text=text
         )
+
+    if state.get("ui_state") == "QA" and len(text) > 300:
+        state["ui_state"] = "TEXT_LOADED"
         
     # ошибки
     if data.get("error"):
