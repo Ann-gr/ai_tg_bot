@@ -18,12 +18,9 @@ async def stream_ai_response(messages):
     async with httpx.AsyncClient(timeout=None) as client:
         async with client.stream("POST", API_URL, headers=headers, json=payload) as response:
 
-            if response.status_code == 402:
-                async with httpx.AsyncClient(timeout=15) as client:
-                    response = await client.post(API_URL, headers=headers, json=payload)
-
             if response.status_code != 200:
-                yield f"❌ Ошибка {response.status_code}: {response.text}"
+                error_text = await response.aread()
+                yield f"❌ Ошибка {response.status_code}: {error_text.decode()}"
                 return
 
             async for line in response.aiter_lines():
