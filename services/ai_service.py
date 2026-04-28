@@ -104,8 +104,6 @@ async def stream_ai_response(
 
     max_tokens = MAX_TOKENS
 
-    print(f"⚠️ Provider {provider} failed, attempt {attempt}")
-
     for provider in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
 
@@ -141,6 +139,8 @@ async def stream_ai_response(
 
                 # остальные ошибки → пробуем ещё раз
                 continue
+            
+            print(f"⚠️ Provider {provider} failed, attempt {attempt}")
 
     # если всё упало
     yield "⚠️ Не удалось получить ответ от AI. Попробуйте позже."
