@@ -1,6 +1,6 @@
 from core.modes import MODE_REGISTRY
 
-SYSTEM_PROMPT = "You are a professional text analysis assistant. Answer clearly and structured."
+SYSTEM_PROMPT = "You are a professional text analysis assistant. Answer clearly and structured. Always respond in Russian."
 MAX_TEXT_LENGTH = 1000
 MAX_HISTORY_ITEMS = 1
 MAX_Q_LEN = 100
