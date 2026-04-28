@@ -1,4 +1,4 @@
-from services.text_repository import get_text, save_text, save_chunks, get_chunks
+from services.text_repository import save_text, save_chunks, get_chunks
 from services.streaming_service import stream_and_render
 from utils.relevance import get_top_chunks, select_relevant_chunks
 from utils.text_splitter import split_text
@@ -16,7 +16,12 @@ async def prepare_qa_context(state, question):
 
     context_chunks = top_chunks if top_chunks else chunks[:2]
 
-    context = "\n\n".join(context_chunks)[:1000]
+    MAX_CONTEXT_CHARS = 1200
+
+    context = "\n\n".join(context_chunks)
+
+    if len(context) > MAX_CONTEXT_CHARS:
+        context = context[:MAX_CONTEXT_CHARS]
 
     return {
         "action": "ready_to_stream",

@@ -16,5 +16,7 @@ async def run_analysis_stream(text, state, user_question=None):
         {"role": "user", "content": prompt}
     ]
 
+    messages = messages[-6:]
+
     async for chunk in stream_ai_response(messages):
         yield chunk
