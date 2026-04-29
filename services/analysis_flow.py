@@ -34,8 +34,6 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
     DEFAULT_TOP_K = 3
 
     if user_question:
-        if not user_question:
-            return {"error": "❓ Введите вопрос"}
 
         chunks = await get_chunks(state["current_text_id"])
 
@@ -56,8 +54,11 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
             "question": user_question
         }
     
+    if not user_question:
+        return {"error": "❓ Введите вопрос"}
+    
     # если пришёл новый текст
-    elif new_text:
+    if new_text:
         text_id = await save_text(user_id, new_text)
         state["current_text_id"] = text_id
 
