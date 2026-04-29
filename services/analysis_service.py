@@ -16,7 +16,9 @@ async def run_analysis_stream(text, state, user_question=None):
         {"role": "user", "content": prompt}
     ]
 
-    messages = messages[-6:]
+    for m in messages:
+        if len(m["content"]) > 2000:
+            m["content"] = m["content"][:2000]
 
     async for chunk in stream_ai_response(messages):
         yield chunk

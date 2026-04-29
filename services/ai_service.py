@@ -59,7 +59,16 @@ async def yandex_generate(messages, max_tokens) -> str:
         "Content-Type": "application/json",
     }
 
-    prompt = "\n".join([m["content"] for m in messages])
+    prompt = ""
+
+    for m in messages:
+        role = m["role"]
+        content = m["content"]
+
+        if role == "system":
+            prompt += f"Инструкция:\n{content}\n\n"
+        elif role == "user":
+            prompt += f"Запрос:\n{content}\n\n"
 
     payload = {
         "modelUri": f"gpt://{YANDEX_FOLDER_ID}/yandexgpt-lite",
@@ -82,7 +91,8 @@ async def yandex_generate(messages, max_tokens) -> str:
     data = response.json()
 
     try:
-        return data["result"]["alternatives"][0]["message"]["text"]
+        text = data["result"]["alternatives"][0]["message"]["text"]
+        return text.strip()
     except Exception:
         return ""
 
@@ -94,8 +104,8 @@ async def yandex_stream(messages, max_tokens):
         raise Exception("Яндекс не смог сгенерировать текст")
 
     # имитация стрима (очень лёгкая)
-    for chunk in text.split():
-        yield chunk + " "
+    for i in range(0, len(text), 40):
+        yield text[i:i+40]
         await asyncio.sleep(0.01)
 
 async def stream_ai_response(
@@ -109,8 +119,15 @@ async def stream_ai_response(
 
             try:
                 if provider == "openrouter":
+                    got_response = False
+
                     async for chunk in openrouter_stream(messages, max_tokens):
+                        got_response = True
                         yield chunk
+
+                    if not got_response:
+                        raise Exception("OpenRouter вернул пустой ответ")
+
                     return
 
                 elif provider == "yandex":
@@ -119,18 +136,25 @@ async def stream_ai_response(
                     return
 
             except httpx.ReadTimeout:
-                continue
+                print(f"⏱ Timeout у {provider}")
+                break
 
             except httpx.ConnectError:
-                continue
+                print(f"🌐 Connection error у {provider}")
+                break
 
             except Exception as e:
                 err = str(e)
-                print(f"❌ Ошибка: {err}")
+                print(f"❌ [Ошибка {provider}] попытка {attempt}: {err}")
 
                 # лимиты → уменьшаем
                 if "402" in err or "max_tokens" in err:
                     max_tokens = int(max_tokens * 0.7)
+
+                    if max_tokens < 200:
+                        print("⚠️ слишком мало токенов → fallback")
+                        break
+
                     continue
 
                 # модель не найдена → сразу fallback
@@ -139,8 +163,6 @@ async def stream_ai_response(
 
                 # остальные ошибки → пробуем ещё раз
                 continue
-            
-            print(f"⚠️ Provider {provider} failed, attempt {attempt}")
 
     # если всё упало
     yield "⚠️ Не удалось получить ответ от AI. Попробуйте позже."

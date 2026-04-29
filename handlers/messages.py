@@ -40,6 +40,9 @@ async def handle_message(update, context):
         if not state.get("current_text_id"):
             await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
             return
+        
+        state["question"] = text
+        await state_manager.update_state(user_id, **state)
     
         data = await prepare_analysis_data(
             user_id,
@@ -52,9 +55,6 @@ async def handle_message(update, context):
             state,
             new_text=text
         )
-
-    if state.get("ui_state") == "QA" and len(text) > 300:
-        state["ui_state"] = "TEXT_LOADED"
         
     # ошибки
     if data.get("error"):
@@ -81,15 +81,23 @@ async def handle_message(update, context):
         question=data.get("question"),
     )
 
-    analysis_id = await save_analysis(
-        user_id,
-        state.get("current_text_id"),
-        state.get("mode"),
-        full_text
-    )
+    try:
+        if not full_text:
+            print("❌ Пустой результат, пропускаем сохранение в БД")
+            return
+        
+        analysis_id = await save_analysis(
+            user_id,
+            state.get("current_text_id"),
+            state.get("mode"),
+            full_text
+        )
 
-    state["last_result_id"] = analysis_id
-    await state_manager.update_state(user_id, **state)
+        state["last_result_id"] = analysis_id
+        await state_manager.update_state(user_id, **state)
+
+    except Exception as e:
+        print("❌ Ошибка сохранения в БД:", e)  
 
 # ОБРАБОТКА ФАЙЛОВ
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
