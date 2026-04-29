@@ -44,9 +44,8 @@ async def handle_message(update, context):
             return
         
         state["question"] = text
+        state["mode"] = "qa"
         await state_manager.update_state(user_id, **state)
-
-        state = await state_manager.get_state(user_id)
     
         data = await prepare_analysis_data(
             user_id,

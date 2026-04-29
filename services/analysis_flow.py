@@ -33,7 +33,7 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
     MAX_CONTEXT_CHARS = 3000
     DEFAULT_TOP_K = 3
 
-    if state.get("mode") == "qa":
+    if state.get("mode") == "qa" or user_question:
         if not user_question:
             return {"error": "❓ Введите вопрос"}
 
