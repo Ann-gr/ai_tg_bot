@@ -35,6 +35,8 @@ async def handle_message(update, context):
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
     )
 
+    print("STATE:", state)
+
     # Если режим QA и мы ожидаем вопрос
     if state.get("ui_state") == "QA":
         if not state.get("current_text_id"):
@@ -43,6 +45,8 @@ async def handle_message(update, context):
         
         state["question"] = text
         await state_manager.update_state(user_id, **state)
+
+        state = await state_manager.get_state(user_id)
     
         data = await prepare_analysis_data(
             user_id,
