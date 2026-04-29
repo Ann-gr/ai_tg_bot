@@ -33,7 +33,10 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
     MAX_CONTEXT_CHARS = 3000
     DEFAULT_TOP_K = 3
 
+    # QA режим
     if user_question:
+        if not state.get("current_text_id"):
+            return {"error": "❌ Сначала загрузите текст"}
 
         chunks = await get_chunks(state["current_text_id"])
 
@@ -53,11 +56,8 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
             "text": text,
             "question": user_question
         }
-    
-    if not user_question:
-        return {"error": "❓ Введите вопрос"}
-    
-    # если пришёл новый текст
+
+    # Новый текст
     if new_text:
         text_id = await save_text(user_id, new_text)
         state["current_text_id"] = text_id
@@ -67,11 +67,11 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
 
         return {"action": "ask_mode"}
 
-    # если текста нет
+    # Нет текста
     if not state.get("current_text_id"):
-        return {"error": "❌ Сначала загрузите текст (отправьте файл или текст)"}
+        return {"error": "❌ Сначала загрузите текст"}
 
-    # Анализ (не QA)
+    # Обычный анализ
     chunks = await get_chunks(state["current_text_id"])
     selected_chunks = chunks[:DEFAULT_TOP_K]
 
