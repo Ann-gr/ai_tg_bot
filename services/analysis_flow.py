@@ -5,40 +5,30 @@ from utils.text_splitter import split_text
 from handlers.keyboards import get_modes_keyboard
 from state import state_manager
 
-async def prepare_qa_context(state, question):
-    if not state.get("current_text_id"):
-        return {"error": "❌ Сначала загрузите текст (отправьте файл или текст)"}
-
-    text_id = state["current_text_id"]
-
-    # получаем чанки
-    chunks = await get_chunks(text_id)
-    # находим релевантные
-    top_chunks = select_relevant_chunks(chunks, question)
-
-    context_chunks = top_chunks if top_chunks else chunks[:2]
-
-    MAX_CONTEXT_CHARS = 1200
-
-    context = "\n\n".join(context_chunks)
-
-    if len(context) > MAX_CONTEXT_CHARS:
-        context = context[:MAX_CONTEXT_CHARS]
-
-    return {
-        "action": "ready_to_stream",
-        "text": context,
-        "question": question,
-    }
-
 async def prepare_analysis_data(user_id, state, new_text=None, user_question=None):
     MAX_CONTEXT_CHARS = 3000
     DEFAULT_TOP_K = 3
 
+    mode = state.get("mode")
+
+    # Новый текст
+    if new_text:
+        text_id = await save_text(user_id, new_text)
+        state["current_text_id"] = text_id
+
+        chunks = split_text(new_text)
+        await save_chunks(text_id, chunks)
+
+        return {"action": "ask_mode"}
+
+    # нет текста
+    if not state.get("current_text_id"):
+        return {"error": "❌ Сначала загрузите текст"}
+
     # QA режим
-    if user_question:
-        if not state.get("current_text_id"):
-            return {"error": "❌ Сначала загрузите текст"}
+    if mode == "qa":
+        if not user_question:
+            return {"error": "❓ Введите вопрос"}
 
         chunks = await get_chunks(state["current_text_id"])
 
@@ -58,20 +48,6 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
             "text": text,
             "question": user_question
         }
-
-    # Новый текст
-    if new_text:
-        text_id = await save_text(user_id, new_text)
-        state["current_text_id"] = text_id
-
-        chunks = split_text(new_text)
-        await save_chunks(text_id, chunks)
-
-        return {"action": "ask_mode"}
-
-    # Нет текста
-    if not state.get("current_text_id"):
-        return {"error": "❌ Сначала загрузите текст"}
 
     # Обычный анализ
     chunks = await get_chunks(state["current_text_id"])
