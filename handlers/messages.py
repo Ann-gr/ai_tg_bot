@@ -6,11 +6,10 @@ from telegram.ext import ContextTypes
 from handlers.keyboards import get_modes_keyboard
 from state import state_manager
 
+from services.analysis_flow import run_analysis_pipeline
 from services.file_service import extract_text_from_file, FileProcessingError
-from services.analysis_flow import prepare_analysis_data
-from services.history_repository import save_analysis
+from services.history_repository import save_analysis, save_qa
 from services.text_repository import save_text, save_chunks
-from services.streaming_service import stream_and_render
 
 from utils.text_splitter import split_text
 
@@ -35,54 +34,15 @@ async def handle_message(update, context):
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
     )
 
-    print("STATE:", state)
+    # Если QA режим → это вопрос
+    user_question = text if state.get("mode") == "qa" else None
 
-    # Если режим QA и мы ожидаем вопрос
-    if state.get("mode") == "qa":
-        if not state.get("current_text_id"):
-            await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
-            return
-        
-        state["question"] = text
-
-        await state_manager.update_state(user_id, **state)
-        state = await state_manager.get_state(user_id)
-    
-        data = await prepare_analysis_data(
-            user_id,
-            state,
-            user_question=text
-        )
-    else:
-        data = await prepare_analysis_data(
-            user_id,
-            state,
-            new_text=text
-        )
-        
-    # ошибки
-    if data.get("error"):
-        await loading_msg.edit_text(data["error"])
-        return
-
-    # выбрать режим
-    if data.get("action") == "ask_mode":
-        state["ui_state"] = "TEXT_LOADED"
-        await state_manager.update_state(user_id, **state)
-
-        await loading_msg.edit_text(
-            "✅ Текст загружен\n\nВыберите режим:",
-            reply_markup=get_modes_keyboard(),
-        )
-        return
-
-    # STREAMING
-    full_text = await stream_and_render(
+    full_text = await run_analysis_pipeline(
         edit_func=loading_msg.edit_text,
         user_id=user_id,
         state=state,
-        text=data.get("text"),
-        question=data.get("question"),
+        new_text=text if not user_question else None,
+        user_question=user_question
     )
 
     try:
@@ -90,15 +50,23 @@ async def handle_message(update, context):
             print("❌ Пустой результат, пропускаем сохранение в БД")
             return
         
-        analysis_id = await save_analysis(
-            user_id,
-            state.get("current_text_id"),
-            state.get("mode"),
-            full_text
-        )
+        if state.get("mode") == "qa":
+            await save_qa(
+                user_id,
+                state.get("current_text_id"),
+                text,
+                full_text
+            )
+        else:
+            analysis_id = await save_analysis(
+                user_id,
+                state.get("current_text_id"),
+                state.get("mode"),
+                full_text
+            )
 
-        state["last_result_id"] = analysis_id
-        await state_manager.update_state(user_id, **state)
+            state["last_result_id"] = analysis_id
+            await state_manager.update_state(user_id, **state)
 
     except Exception as e:
         print("❌ Ошибка сохранения в БД:", e)  

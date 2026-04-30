@@ -51,3 +51,13 @@ async def stream_and_render(
     )
 
     return full_text
+
+def trim_frequency_result(text: str, top_n: int):
+    lines = text.split("\n")
+    result = []
+    
+    for line in lines:
+        if line.strip().startswith(tuple(str(i) for i in range(1, 100))):
+            result.append(line)
+    
+    return "\n".join(result[:top_n])

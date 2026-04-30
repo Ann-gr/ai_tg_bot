@@ -1,6 +1,6 @@
 from services.text_repository import save_text, save_chunks, get_chunks
 from services.streaming_service import stream_and_render
-from utils.relevance import get_top_chunks, select_relevant_chunks
+from utils.relevance import select_relevant_chunks
 from utils.text_splitter import split_text
 
 async def prepare_qa_context(state, question):
@@ -12,7 +12,7 @@ async def prepare_qa_context(state, question):
     # получаем чанки
     chunks = await get_chunks(text_id)
     # находим релевантные
-    top_chunks = get_top_chunks(chunks, question)
+    top_chunks = select_relevant_chunks(chunks, question)
 
     context_chunks = top_chunks if top_chunks else chunks[:2]
 
