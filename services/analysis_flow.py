@@ -2,6 +2,8 @@ from services.text_repository import save_text, save_chunks, get_chunks
 from services.streaming_service import stream_and_render
 from utils.relevance import select_relevant_chunks
 from utils.text_splitter import split_text
+from handlers.keyboards import get_modes_keyboard
+from state import state_manager
 
 async def prepare_qa_context(state, question):
     if not state.get("current_text_id"):
@@ -89,13 +91,33 @@ async def run_analysis_pipeline(
     edit_func,
     user_id,
     state,
+    new_text=None,
+    user_question=None,
 ):
-    data = await prepare_analysis_data(user_id, state)
+    data = await prepare_analysis_data(
+        user_id,
+        state,
+        new_text=new_text,
+        user_question=user_question
+    )
 
+    # ошибка
     if data.get("error"):
         await edit_func(data["error"])
         return None
 
+    # текст загружен → показать выбор режима
+    if data.get("action") == "ask_mode":
+        state["ui_state"] = "TEXT_LOADED"
+        await state_manager.update_state(user_id, **state)
+
+        await edit_func(
+            "✅ Текст загружен\n\nВыберите режим:",
+            reply_markup=get_modes_keyboard(),
+        )
+        return None
+
+    # стриминг
     result = await stream_and_render(
         edit_func=edit_func,
         user_id=user_id,
