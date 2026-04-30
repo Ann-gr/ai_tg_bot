@@ -38,13 +38,12 @@ async def handle_message(update, context):
     print("STATE:", state)
 
     # Если режим QA и мы ожидаем вопрос
-    if state.get("ui_state") == "QA":
+    if state.get("mode") == "qa":
         if not state.get("current_text_id"):
             await loading_msg.edit_text("❌ Сначала загрузите текст (отправьте файл или текст)")
             return
         
         state["question"] = text
-        state["mode"] = "qa"
 
         await state_manager.update_state(user_id, **state)
         state = await state_manager.get_state(user_id)
