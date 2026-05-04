@@ -1,6 +1,7 @@
 import time
 
 from services.analysis_service import run_analysis_stream
+from services.history_repository import save_analysis, save_qa
 from utils.render import render_result
 from state import state_manager
 
@@ -38,17 +39,45 @@ async def stream_and_render(
             last_update = now
 
     # финал
-    state["last_result"] = full_text
     state["result_view"] = "short"
     state["ui_state"] = "RESULT"
 
     await state_manager.update_state(user_id, **state)
+    
+    # пост-обработка (частотный анализ)
+    if state.get("mode") == "frequency":
+        n = state.get("params", {}).get("n", 10)
+        full_text = trim_frequency_result(full_text, n)
+
+    state["last_result"] = full_text
 
     await render_result(
         edit_func,
         state,
         full_text
     )
+
+    try:
+        if state.get("mode") == "qa":
+            await save_qa(
+                user_id,
+                state.get("current_text_id"),
+                question,
+                full_text
+            )
+        else:
+            analysis_id = await save_analysis(
+                user_id,
+                state.get("current_text_id"),
+                state.get("mode"),
+                full_text
+            )
+
+            state["last_result_id"] = analysis_id
+            await state_manager.update_state(user_id, **state)
+
+    except Exception as e:
+        print("❌ Ошибка сохранения:", e)
 
     return full_text
 

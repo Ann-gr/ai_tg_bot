@@ -219,7 +219,6 @@ async def handle_action(query, context, user_id, state, payload):
         state["last_result_id"] = None
         state["mode"] = "analysis"
         state["ui_state"] = "EMPTY"
-        state["qa_history"] = []
         state["params"] = {}
 
         await state_manager.update_state(user_id, **state)
@@ -232,8 +231,10 @@ async def handle_action(query, context, user_id, state, payload):
     elif action == "short_result":
         full_text = state.get("last_result")
 
-        if not full_text and state.get("last_result_id"):
-            full_text = await get_analysis_by_id(state.get("last_result_id"))
+        if not full_text:
+            result_id = state.get("last_result_id")
+            if result_id:
+                full_text = await get_analysis_by_id(result_id)
 
         if not full_text:
             await query.edit_message_text(

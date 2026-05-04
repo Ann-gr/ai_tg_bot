@@ -8,7 +8,6 @@ from state import state_manager
 
 from services.analysis_flow import run_analysis_pipeline
 from services.file_service import extract_text_from_file, FileProcessingError
-from services.history_repository import save_analysis, save_qa
 from services.text_repository import save_text, save_chunks
 
 from utils.text_splitter import split_text
@@ -27,49 +26,28 @@ async def handle_message(update, context):
     state = await state_manager.get_state(user_id)
     text = update.message.text
 
-    if update.message.photo:
-        await update.message.reply_text("📷 Пожалуйста, отправьте файл (PDF, DOCX, TXT), а не фото")
+    # определяем: это вопрос или новый текст
+    user_question = text if state.get("mode") == "qa" else None
+    new_text = text if not user_question else None
 
+    if update.message.photo:
+        await update.message.reply_text(
+            "📷 Пожалуйста, отправьте файл (PDF, DOCX, TXT), а не фото"
+        )
+        return
+    
     loading_msg = await update.message.reply_text(
         "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
     )
 
-    # Если QA режим → это вопрос
-    user_question = text if state.get("mode") == "qa" else None
-
-    full_text = await run_analysis_pipeline(
+    # получаем данные от pipeline
+    await run_analysis_pipeline(
         edit_func=loading_msg.edit_text,
         user_id=user_id,
         state=state,
-        new_text=text if not user_question else None,
+        new_text=new_text,
         user_question=user_question
     )
-
-    try:
-        if not full_text:
-            print("❌ Пустой результат, пропускаем сохранение в БД")
-            return
-        
-        if state.get("mode") == "qa":
-            await save_qa(
-                user_id,
-                state.get("current_text_id"),
-                text,
-                full_text
-            )
-        else:
-            analysis_id = await save_analysis(
-                user_id,
-                state.get("current_text_id"),
-                state.get("mode"),
-                full_text
-            )
-
-            state["last_result_id"] = analysis_id
-            await state_manager.update_state(user_id, **state)
-
-    except Exception as e:
-        print("❌ Ошибка сохранения в БД:", e)  
 
 # ОБРАБОТКА ФАЙЛОВ
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
