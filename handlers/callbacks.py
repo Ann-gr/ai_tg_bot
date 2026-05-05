@@ -215,7 +215,8 @@ async def handle_action(query, context, user_id, state, payload):
         await hide_all_qa(user_id)
 
         state["current_text_id"] = None
-        state["last_result"] = None
+        state["last_result_full"] = None
+        state["last_result_short"] = None
         state["last_result_id"] = None
         state["mode"] = "analysis"
         state["ui_state"] = "EMPTY"
@@ -229,37 +230,27 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "short_result":
-        full_text = state.get("last_result")
+        short_text = state.get("last_result_short")
 
-        if not full_text:
-            result_id = state.get("last_result_id")
-            if result_id:
-                full_text = await get_analysis_by_id(result_id)
-
-        if not full_text:
+        if not short_text:
             await query.edit_message_text(
                 "❌ Нет результата",
                 reply_markup=get_back_keyboard()
             )
             return
-        
+
         state["result_view"] = "short"
         await state_manager.update_state(user_id, **state)
-
-        short_text, is_truncated = shorten_text(full_text)
 
         title = get_mode_title(state.get("mode"))
 
         await query.edit_message_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard("short", is_truncated, state.get("mode")),
+            reply_markup=get_result_keyboard("short", False, state.get("mode")),
         )
 
     elif action == "full_result":
-        full_text = state.get("last_result")
-
-        if not full_text and state.get("last_result_id"):
-            full_text = await get_analysis_by_id(state.get("last_result_id"))
+        full_text = state.get("last_result_full")
 
         if not full_text:
             await query.edit_message_text(
@@ -267,9 +258,8 @@ async def handle_action(query, context, user_id, state, payload):
                 reply_markup=get_back_keyboard()
             )
             return
-        
-        state["result_view"] = "full"
 
+        state["result_view"] = "full"
         await state_manager.update_state(user_id, **state)
 
         await render_result(

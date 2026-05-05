@@ -3,6 +3,7 @@ import time
 from services.analysis_service import run_analysis_stream
 from services.history_repository import save_analysis, save_qa
 from utils.render import render_result
+from utils.text_utils import shorten_text
 from state import state_manager
 
 UPDATE_INTERVAL = 0.4
@@ -47,14 +48,24 @@ async def stream_and_render(
     # пост-обработка (частотный анализ)
     if state.get("mode") == "frequency":
         n = state.get("params", {}).get("n", 10)
-        full_text = trim_frequency_result(full_text, n)
+        processed_text = trim_frequency_result(full_text, n)
+    else:
+        processed_text = full_text
 
-    state["last_result"] = full_text
+    # сохраняем ДВА варианта
+    state["last_result_full"] = processed_text
+    state["last_result_short"], _ = shorten_text(processed_text)
 
+    state["result_view"] = "short"
+    state["ui_state"] = "RESULT"
+
+    await state_manager.update_state(user_id, **state)
+
+    # показываем короткую версию
     await render_result(
         edit_func,
         state,
-        full_text
+        state["last_result_short"]
     )
 
     try:
