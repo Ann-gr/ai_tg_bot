@@ -38,12 +38,6 @@ async def stream_and_render(
 
             buffer = ""
             last_update = now
-
-    # финал
-    state["result_view"] = "short"
-    state["ui_state"] = "RESULT"
-
-    await state_manager.update_state(user_id, **state)
     
     # пост-обработка (частотный анализ)
     if state.get("mode") == "frequency":
@@ -52,15 +46,7 @@ async def stream_and_render(
     else:
         processed_text = full_text
 
-    # сохраняем ДВА варианта
-    state["last_result_full"] = processed_text
-    state["last_result_short"], _ = shorten_text(processed_text)
-
-    state["result_view"] = "short"
-    state["ui_state"] = "RESULT"
-
-    await state_manager.update_state(user_id, **state)
-
+    # сохраняем в бд
     try:
         if state.get("mode") == "qa":
             await save_qa(
@@ -83,7 +69,16 @@ async def stream_and_render(
     except Exception as e:
         print("❌ Ошибка сохранения:", e)
 
-    # показываем короткую версию
+    # формируем state
+    state["last_result_id"] = analysis_id
+    state["last_result_full"] = processed_text
+    state["last_result_short"], _ = shorten_text(processed_text)
+    state["result_view"] = "short"
+    state["ui_state"] = "RESULT"
+
+    await state_manager.update_state(user_id, **state)
+
+    # рендер
     await render_result(
         edit_func,
         state,
