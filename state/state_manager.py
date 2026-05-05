@@ -8,7 +8,7 @@ def resolve_ui_state(state):
         if state.get("mode") == "qa":
             return "QA"
 
-        if state.get("last_result_full"):
+        if state.get("last_result_id"):
             return "RESULT"
 
         return "TEXT_LOADED"

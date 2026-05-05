@@ -61,13 +61,6 @@ async def stream_and_render(
 
     await state_manager.update_state(user_id, **state)
 
-    # показываем короткую версию
-    await render_result(
-        edit_func,
-        state,
-        state["last_result_short"]
-    )
-
     try:
         if state.get("mode") == "qa":
             await save_qa(
@@ -89,6 +82,13 @@ async def stream_and_render(
 
     except Exception as e:
         print("❌ Ошибка сохранения:", e)
+
+    # показываем короткую версию
+    await render_result(
+        edit_func,
+        state,
+        state["last_result_short"]
+    )
 
     return full_text
 
