@@ -5,20 +5,29 @@ from utils.text_utils import shorten_text
 
 async def render_result(edit_func, state, text):
     title = get_mode_title(state.get("mode"))
-    text = text.replace("\n\n👇 Нажмите, чтобы посмотреть полностью", "")
 
     if state.get("result_view") == "full":
         final_text = text
-        is_truncated = False
+        is_truncated = True
+
     else:
-        final_text, is_truncated = shorten_text(text)
+        final_text = state.get("last_result_short")
+
+        if not final_text:
+            final_text, is_truncated = shorten_text(text)
+        else:
+            is_truncated = False
 
     message = f"{title}\n\n{final_text}"
 
-    if is_truncated:
+    if is_truncated and state.get("result_view") == "short":
         message += "\n\n👇 Нажмите, чтобы посмотреть полностью"
 
     await edit_func(
         message,
-        reply_markup=get_result_keyboard(state.get("result_view"), is_truncated, state.get("mode"))
+        reply_markup=get_result_keyboard(
+            state.get("result_view"),
+            is_truncated,
+            state.get("mode")
+        )
     )

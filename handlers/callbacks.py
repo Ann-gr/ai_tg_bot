@@ -233,13 +233,8 @@ async def handle_action(query, context, user_id, state, payload):
         short_text = state.get("last_result_short")
 
         if not short_text:
-            result_id = state.get("last_result_id")
-            if result_id:
-                full_text = await get_analysis_by_id(result_id)
-                short_text, _ = shorten_text(full_text)
-            else:
-                await query.edit_message_text("❌ Нет результата")
-                return
+            await query.edit_message_text("❌ Нет результата")
+            return
 
         state["result_view"] = "short"
         await state_manager.update_state(user_id, **state)
@@ -248,27 +243,32 @@ async def handle_action(query, context, user_id, state, payload):
 
         await query.edit_message_text(
             f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard("short", False, state.get("mode")),
+            reply_markup=get_result_keyboard(
+                "short",
+                False,
+                state.get("mode")
+            ),
         )
 
     elif action == "full_result":
         full_text = state.get("last_result_full")
 
         if not full_text:
-            result_id = state.get("last_result_id")
-            if result_id:
-                full_text = await get_analysis_by_id(result_id)
-            else:
-                await query.edit_message_text("❌ Нет результата")
-                return
+            await query.edit_message_text("❌ Нет результата")
+            return
 
         state["result_view"] = "full"
         await state_manager.update_state(user_id, **state)
 
-        await render_result(
-            query.edit_message_text,
-            state,
-            full_text
+        title = get_mode_title(state.get("mode"))
+
+        await query.edit_message_text(
+            f"{title}\n\n{full_text}",
+            reply_markup=get_result_keyboard(
+                "full",
+                True,
+                state.get("mode")
+            ),
         )
 
 async def handle_analysis_item(query, context, user_id, state, payload):
