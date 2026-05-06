@@ -2,7 +2,7 @@ import time
 
 from services.analysis_service import run_analysis_stream
 from services.history_repository import save_analysis, save_qa
-from utils.render import render_result
+from handlers.keyboards import get_result_keyboard
 from utils.text_utils import shorten_text
 from state import state_manager
 
@@ -10,12 +10,14 @@ UPDATE_INTERVAL = 0.4
 MIN_CHARS = 40
 
 async def stream_and_render(
-    edit_func,
+    send_func,
     user_id,
     state,
     text,
     question=None,
 ):
+    message = await send_func("⏳ Думаю над ответом...\n\nЭто может занять несколько секунд")
+
     buffer = ""
     full_text = ""
     last_update = time.time()
@@ -32,7 +34,7 @@ async def stream_and_render(
 
         if len(buffer) >= MIN_CHARS or (now - last_update) > UPDATE_INTERVAL:
             try:
-                await edit_func(full_text + "▌")
+                await message.edit_text(full_text + "▌")
             except Exception:
                 pass
 
@@ -80,8 +82,15 @@ async def stream_and_render(
 
     await state_manager.update_state(user_id, **state)
 
-    # рендер
-    await render_result(edit_func, state)
+    # финальный вывод
+    await message.edit_text(
+        processed_text,
+        reply_markup=get_result_keyboard(
+            "full",
+            state["is_truncated"],
+            state.get("mode")
+        )
+    )
 
     return full_text
 

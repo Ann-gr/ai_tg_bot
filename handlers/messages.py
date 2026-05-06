@@ -9,6 +9,7 @@ from state import state_manager
 from services.analysis_flow import run_analysis_pipeline
 from services.file_service import extract_text_from_file, FileProcessingError
 from services.text_repository import save_text, save_chunks
+from services.streaming_service import stream_and_render
 
 from utils.text_splitter import split_text
 
@@ -35,14 +36,9 @@ async def handle_message(update, context):
             "📷 Пожалуйста, отправьте файл (PDF, DOCX, TXT), а не фото"
         )
         return
-    
-    loading_msg = await update.message.reply_text(
-        "⏳ Думаю над ответом...\n\nЭто может занять несколько секунд"
-    )
 
-    # получаем данные от pipeline
     await run_analysis_pipeline(
-        edit_func=loading_msg.edit_text,
+        send_func=update.message.reply_text,
         user_id=user_id,
         state=state,
         new_text=new_text,

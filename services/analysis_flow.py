@@ -53,7 +53,7 @@ async def prepare_analysis_data(user_id, state, new_text=None, user_question=Non
     }
 
 async def run_analysis_pipeline(
-    edit_func,
+    send_func,
     user_id,
     state,
     new_text=None,
@@ -68,27 +68,25 @@ async def run_analysis_pipeline(
 
     # ошибка
     if data.get("error"):
-        await edit_func(data["error"])
-        return None
+        await send_func(data["error"])
+        return
 
-    # текст загружен → показать выбор режима
+    # текст загружен → выбор режима
     if data.get("action") == "ask_mode":
         state["ui_state"] = "TEXT_LOADED"
         await state_manager.update_state(user_id, **state)
 
-        await edit_func(
+        await send_func(
             "✅ Текст загружен\n\nВыберите режим:",
             reply_markup=get_modes_keyboard(),
         )
-        return None
+        return
 
     # стриминг
-    result = await stream_and_render(
-        edit_func=edit_func,
+    await stream_and_render(
+        send_func=send_func,
         user_id=user_id,
         state=state,
         text=data.get("text"),
         question=data.get("question"),
     )
-
-    return result
