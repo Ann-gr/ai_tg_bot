@@ -230,46 +230,24 @@ async def handle_action(query, context, user_id, state, payload):
         )
 
     elif action == "short_result":
-        short_text = state.get("last_result_short")
-
-        if not short_text:
+        if not state.get("last_result_short"):
             await query.edit_message_text("❌ Нет результата")
             return
 
         state["result_view"] = "short"
         await state_manager.update_state(user_id, **state)
 
-        title = get_mode_title(state.get("mode"))
-
-        await query.edit_message_text(
-            f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(
-                "short",
-                False,
-                state.get("mode")
-            ),
-        )
+        await render_result(query.edit_message_text, state)
 
     elif action == "full_result":
-        full_text = state.get("last_result_full")
-
-        if not full_text:
+        if not state.get("last_result_full"):
             await query.edit_message_text("❌ Нет результата")
             return
 
         state["result_view"] = "full"
         await state_manager.update_state(user_id, **state)
 
-        title = get_mode_title(state.get("mode"))
-
-        await query.edit_message_text(
-            f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(
-                "full",
-                True,
-                state.get("mode")
-            ),
-        )
+        await render_result(query.edit_message_text, state)
 
 async def handle_analysis_item(query, context, user_id, state, payload):
     item_id = payload[0]
@@ -308,7 +286,7 @@ async def show_menu(query, state):
     elif ui == "RESULT":
         await query.edit_message_text(
             "📊 Выберите действие:",
-            reply_markup=get_result_keyboard(mode=state.get("mode"))
+            reply_markup=get_result_keyboard("short", state.get("is_truncated"), mode=state.get("mode"))
         )
 
     elif ui == "QA":

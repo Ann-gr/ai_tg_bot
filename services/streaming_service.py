@@ -69,21 +69,19 @@ async def stream_and_render(
     except Exception as e:
         print("❌ Ошибка сохранения:", e)
 
+    short_text, is_truncated = shorten_text(processed_text)
+    
     # формируем state
-    state["last_result_id"] = analysis_id
     state["last_result_full"] = processed_text
-    state["last_result_short"], _ = shorten_text(processed_text)
+    state["last_result_short"] = short_text
+    state["is_truncated"] = is_truncated
     state["result_view"] = "short"
     state["ui_state"] = "RESULT"
 
     await state_manager.update_state(user_id, **state)
 
     # рендер
-    await render_result(
-        edit_func,
-        state,
-        state["last_result_short"]
-    )
+    await render_result(edit_func, state)
 
     return full_text
 
