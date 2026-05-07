@@ -130,6 +130,33 @@ async def handle_param(query, context, user_id, state, payload):
         state=state
     )
 
+async def handle_toggle(query, user_id, state):
+    full_text = state.get("last_result_full")
+    short_text = state.get("last_result_short")
+    is_truncated = state.get("is_truncated")
+
+    if not full_text:
+        await query.answer("❌ Нет результата")
+        return
+
+    current_view = state.get("result_view", "short")
+    new_view = "full" if current_view == "short" else "short"
+
+    state["result_view"] = new_view
+    await state_manager.update_state(user_id, **state)
+
+    text = full_text if new_view == "full" else short_text
+    title = get_mode_title(state.get("mode"))
+
+    await query.message.edit_text(
+        f"{title}\n\n{text}",
+        reply_markup=get_result_keyboard(
+            new_view,
+            is_truncated,
+            state.get("mode")
+        )
+    )
+
 async def handle_action(query, context, user_id, state, payload):
     action = payload[0]
 
@@ -221,41 +248,8 @@ async def handle_action(query, context, user_id, state, payload):
             reply_markup=get_empty_keyboard()
         )
 
-    elif action == "short_result":
-        short_text = state.get("last_result_short")
-
-        if not short_text:
-            await query.message.reply_text("❌ Нет результата")
-            return
-
-        title = get_mode_title(state.get("mode"))
-
-        await query.message.reply_text(
-            f"{title}\n\n{short_text}",
-            reply_markup=get_result_keyboard(
-                "short",
-                True,
-                state.get("mode")
-            ),
-        )
-
-    elif action == "full_result":
-        full_text = state.get("last_result_full")
-
-        if not full_text:
-            await query.message.reply_text("❌ Нет результата")
-            return
-
-        title = get_mode_title(state.get("mode"))
-
-        await query.message.reply_text(
-            f"{title}\n\n{full_text}",
-            reply_markup=get_result_keyboard(
-                "full",
-                True,
-                state.get("mode")
-            ),
-        )
+    elif action == "toggle":
+        await handle_toggle(query, user_id, state)
 
 async def handle_analysis_item(query, context, user_id, state, payload):
     item_id = payload[0]
